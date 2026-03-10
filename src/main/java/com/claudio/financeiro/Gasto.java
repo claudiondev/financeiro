@@ -2,6 +2,8 @@ package com.claudio.financeiro;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "gastos")
 
@@ -12,6 +14,18 @@ public class Gasto {
     private String descricao;
     private Double valor;
     private String categoria;
+    private LocalDate data;
+
+
+    public LocalDate getData() {
+        return data;
+    }
+
+    public void setData(LocalDate data) {
+        this.data = data;
+    }
+
+
 
     public Long getId() {
         return id;
@@ -44,4 +58,5 @@ public class Gasto {
     public void setCategoria(String categoria) {
         this.categoria = categoria;
     }
+
 }
