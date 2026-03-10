@@ -16,4 +16,7 @@ public class GastoService {
     public List<Gasto> listar() { return gastoRepository.findAll();
     }
 
+    public void deletar(Long id) {
+        gastoRepository.deleteById(id);
+    }
 }

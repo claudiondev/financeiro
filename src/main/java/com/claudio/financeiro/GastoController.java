@@ -17,4 +17,7 @@ public class GastoController {
     @GetMapping
     public List <Gasto> listar() { return gastoService.listar();
     }
+    @DeleteMapping("/{id}")
+    public void deletar (@PathVariable Long id ) {gastoService.deletar(id);
+    }
 }
