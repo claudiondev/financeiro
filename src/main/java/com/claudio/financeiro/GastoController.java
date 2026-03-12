@@ -20,4 +20,7 @@ public class GastoController {
     @DeleteMapping("/{id}")
     public void deletar (@PathVariable Long id ) {gastoService.deletar(id);
     }
+    @GetMapping("/resumo")
+    public ResumoMensal resumo() {return gastoService.calcularResumo();
+    }
 }

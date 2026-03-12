@@ -19,4 +19,23 @@ public class GastoService {
     public void deletar(Long id) {
         gastoRepository.deleteById(id);
     }
+
+    @Autowired
+    private SalarioRepository salarioRepository;
+        public ResumoMensal calcularResumo() {
+            List<Gasto> gastos = gastoRepository.findAll();
+            List<Salario> salarios = salarioRepository.findAll();
+            Double totalGastos = gastos.stream().mapToDouble(Gasto::getValor).sum();
+            Double totalSalario= salarios.stream().mapToDouble(Salario::getValor).sum();
+            Double saldo = totalSalario - totalGastos;
+
+             ResumoMensal resumo = new ResumoMensal();
+             resumo.setTotalGasto(totalGastos);
+             resumo.setTotalSalario(totalSalario);
+             resumo.setSaldo(saldo);
+
+             return resumo;
+        }
+
+
 }
