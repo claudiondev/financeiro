@@ -20,6 +20,7 @@ public class Usuario implements UserDetails {
     private Long id;
     private String email;
     private String senha;
+    private String codigoRecuperacao;
 
 
     public Long getId() {
@@ -61,4 +62,14 @@ public class Usuario implements UserDetails {
     public String getUsername() {
         return email;
     }
+
+    public String getCodigoRecuperacao() {
+        return codigoRecuperacao;
+    }
+
+    public void setCodigoRecuperacao(String codigoRecuperacao) {
+        this.codigoRecuperacao = codigoRecuperacao;
+    }
+
+
 }

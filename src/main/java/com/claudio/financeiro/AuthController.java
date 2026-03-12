@@ -1,6 +1,8 @@
 package com.claudio.financeiro;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +22,11 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JavaMailSender mailSender;
+
+
+
     @PostMapping("/registrar")
     public String registrar(@RequestBody Usuario usuario) {usuario.setSenha(passwordEncoder.encode(usuario.getSenha())); usuarioRepository.save(usuario);
         return "Usuário registrado com sucesso!";
@@ -35,7 +42,23 @@ public class AuthController {
 
         }
 
+    @PostMapping("/recuperar-senha")
+    public String recuperarSenha(@RequestBody String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email).orElseThrow();
 
+        String codigo = String.valueOf((int)(Math.random() * 900000) + 100000);
+        usuario.setCodigoRecuperacao(codigo);
+        usuarioRepository.save(usuario);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Recuperação de senha");
+        message.setText("Seu código de recuperação é: " + codigo);
+        mailSender.send(message);
+
+        return "Código enviado para o email!";
     }
+
+}
 
 
