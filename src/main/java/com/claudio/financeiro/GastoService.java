@@ -34,6 +34,12 @@ public class GastoService {
              resumo.setTotalSalario(totalSalario);
              resumo.setSaldo(saldo);
 
+             if (saldo > 0) {
+                 resumo.setMensagem("Parabéns! Você economizou esse mês!\uD83C\uDF89");
+             }
+             if (saldo < 0) {
+                 resumo.setMensagem("Atenção! Seus gastos ultrapassaram o salário esse mês!");
+             }
              return resumo;
         }
 

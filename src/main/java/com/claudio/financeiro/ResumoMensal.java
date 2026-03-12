@@ -4,6 +4,17 @@ public class ResumoMensal {
     private Double totalSalario;
     private Double totalGasto;
     private Double saldo;
+    private String mensagem;
+
+
+    public String getMensagem() {
+        return mensagem;
+    }
+
+    public void setMensagem(String mensagem) {
+        this.mensagem = mensagem;
+    }
+
 
 
 
