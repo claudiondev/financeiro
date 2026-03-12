@@ -24,5 +24,18 @@ public class AuthController {
     public String registrar(@RequestBody Usuario usuario) {usuario.setSenha(passwordEncoder.encode(usuario.getSenha())); usuarioRepository.save(usuario);
         return "Usuário registrado com sucesso!";
     }
-}
+
+    @PostMapping("/login")
+    public String login  (@RequestBody Usuario usuario) {
+    Usuario encontrado =
+            usuarioRepository.findByEmail(usuario.getEmail()).orElseThrow();
+        if (!passwordEncoder.matches(usuario.getSenha(), encontrado.getSenha()))
+         return "Senha incorreta";
+         return  jwtService.gerarToken(encontrado.getEmail());
+
+        }
+
+
+    }
+
 
