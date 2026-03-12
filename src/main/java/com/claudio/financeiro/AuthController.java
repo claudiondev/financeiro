@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -57,6 +59,22 @@ public class AuthController {
         mailSender.send(message);
 
         return "Código enviado para o email!";
+    }
+
+    @PostMapping("/redefinir-senha")
+    public String redefinirSenha (@RequestBody RedefinirSenhaRequest request) {
+        List<Usuario> usuarios = usuarioRepository.findAll();
+        for (Usuario usuario : usuarios) {
+            if (request.getCodigo().equals(usuario.getCodigoRecuperacao())) {
+                usuario.setSenha(passwordEncoder.encode(request.getNovaSenha()));
+                usuarioRepository.save(usuario);
+
+                return "Senha redefinida com sucesso!";
+            }
+        }
+
+        return "Código invalido!";
+
     }
 
 }
