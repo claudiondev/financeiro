@@ -4,18 +4,24 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+// Entidade que representa um gasto no banco de dados
 @Entity
 @Table(name = "gastos")
 
 public class Gasto {
+
+    // Identificador único gerado automaticamente pelo banco
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String descricao;
     private Double valor;
     private String categoria;
     private LocalDate data;
 
+    // Getters e Setters
 
     public LocalDate getData() {
         return data;

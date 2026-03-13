@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+// Entidade que representa um salário no banco de dados
+
 @Entity
 @Table(name = "salarios")
 
@@ -16,7 +18,7 @@ public class Salario {
     private LocalDate data;
 
 
-
+// Getters e Setters
 
     public Double getValor() {
         return valor;

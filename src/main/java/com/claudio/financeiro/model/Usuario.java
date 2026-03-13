@@ -7,6 +7,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+// Entidade que representa um usuário no banco de dados
+// Implementa UserDetails para integração com o Spring Security
+
 @Entity
 @Table(name = "usuarios")
 
@@ -20,7 +23,10 @@ public class Usuario implements UserDetails {
     private Long id;
     private String email;
     private String senha;
-    private String codigoRecuperacao;
+    private String codigoRecuperacao;    // Código enviado por email para redefinir senha
+
+
+    // Getters e Setters
 
 
     public Long getId() {
