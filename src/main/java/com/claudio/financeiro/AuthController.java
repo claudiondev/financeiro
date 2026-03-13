@@ -45,15 +45,15 @@ public class AuthController {
         }
 
     @PostMapping("/recuperar-senha")
-    public String recuperarSenha(@RequestBody String email) {
-        Usuario usuario = usuarioRepository.findByEmail(email).orElseThrow();
+    public String recuperarSenha(@RequestBody EmailRequest request) {
+        Usuario usuario = usuarioRepository.findByEmail(request.getEmail()).orElseThrow();
 
         String codigo = String.valueOf((int)(Math.random() * 900000) + 100000);
         usuario.setCodigoRecuperacao(codigo);
         usuarioRepository.save(usuario);
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
+        message.setTo(request.getEmail());
         message.setSubject("Recuperação de senha");
         message.setText("Seu código de recuperação é: " + codigo);
         mailSender.send(message);
