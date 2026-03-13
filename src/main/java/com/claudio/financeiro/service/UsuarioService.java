@@ -1,5 +1,6 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.service;
 
+import com.claudio.financeiro.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

@@ -1,4 +1,4 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.dto;
 
 public class EmailRequest {
     private String email;

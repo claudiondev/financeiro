@@ -1,4 +1,4 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

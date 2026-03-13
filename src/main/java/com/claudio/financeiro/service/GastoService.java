@@ -1,8 +1,12 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.service;
 
+import com.claudio.financeiro.dto.ResumoMensal;
+import com.claudio.financeiro.model.Gasto;
+import com.claudio.financeiro.model.Salario;
+import com.claudio.financeiro.repository.GastoRepository;
+import com.claudio.financeiro.repository.SalarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 

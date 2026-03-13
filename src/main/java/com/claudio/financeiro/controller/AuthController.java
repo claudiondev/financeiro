@@ -1,5 +1,10 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.controller;
 
+import com.claudio.financeiro.dto.EmailRequest;
+import com.claudio.financeiro.dto.RedefinirSenhaRequest;
+import com.claudio.financeiro.model.Usuario;
+import com.claudio.financeiro.repository.UsuarioRepository;
+import com.claudio.financeiro.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;

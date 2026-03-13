@@ -1,4 +1,4 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.service;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

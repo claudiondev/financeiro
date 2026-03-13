@@ -1,5 +1,7 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.controller;
 
+import com.claudio.financeiro.model.Salario;
+import com.claudio.financeiro.service.SalarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

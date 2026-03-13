@@ -1,6 +1,8 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.service;
 
 
+import com.claudio.financeiro.model.Salario;
+import com.claudio.financeiro.repository.SalarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

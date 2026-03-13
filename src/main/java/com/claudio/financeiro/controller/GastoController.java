@@ -1,5 +1,8 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.controller;
 
+import com.claudio.financeiro.dto.ResumoMensal;
+import com.claudio.financeiro.model.Gasto;
+import com.claudio.financeiro.service.GastoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

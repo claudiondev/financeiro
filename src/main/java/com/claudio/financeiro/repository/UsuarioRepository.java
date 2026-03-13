@@ -1,5 +1,6 @@
-package com.claudio.financeiro;
+package com.claudio.financeiro.repository;
 
+import com.claudio.financeiro.model.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
