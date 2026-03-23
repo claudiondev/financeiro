@@ -14,8 +14,30 @@ public class Salario {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Double valor;
+    private Double comissao;
+    private Double adicional;
     private String descricao;
     private LocalDate data;
+
+
+
+    public Double getComissao() {
+        return comissao;
+    }
+
+    public void setComissao(Double comissao) {
+        this.comissao = comissao;
+    }
+
+    public Double getAdicional() {
+        return adicional;
+    }
+
+    public void setAdicional(Double adicional) {
+        this.adicional = adicional;
+    }
+
+
 
 
 // Getters e Setters

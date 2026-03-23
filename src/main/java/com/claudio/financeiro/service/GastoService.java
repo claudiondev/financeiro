@@ -30,7 +30,11 @@ public class GastoService {
             List<Gasto> gastos = gastoRepository.findAll();
             List<Salario> salarios = salarioRepository.findAll();
             Double totalGastos = gastos.stream().mapToDouble(Gasto::getValor).sum();
-            Double totalSalario= salarios.stream().mapToDouble(Salario::getValor).sum();
+            Double totalSalario = salarios.stream().mapToDouble(s ->
+                            (s.getValor() != null ? s.getValor() : 0) +
+                            (s.getComissao() != null ? s.getComissao() : 0) +
+                            (s.getAdicional() != null ? s.getAdicional() : 0)
+            ).sum();
             Double saldo = totalSalario - totalGastos;
 
              ResumoMensal resumo = new ResumoMensal();
