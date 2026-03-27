@@ -127,7 +127,7 @@ Authorization: Bearer {seu_token}
 
 ## 👨‍💻 Autor
 
-Feito com 💙 por **Claudio Nascimento**
+Feito por **Claudio Nascimento**
 
 [![GitHub](https://img.shields.io/badge/GitHub-claudiondev-black?style=for-the-badge&logo=github)](https://github.com/claudiondev)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Claudio%20Nascimento-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/claudionascimento-dev/)
