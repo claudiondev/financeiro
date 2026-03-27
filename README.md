@@ -1,30 +1,29 @@
-# 💰 Sistema de Controle Financeiro
+# 💰 Sistema de Controle Financeiro - API Backend
 
 ![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-green?style=for-the-badge&logo=springboot)
-![Spring Security](https://img.shields.io/badge/Spring%20Security-6.5-green?style=for-the-badge&logo=springsecurity)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.3-green?style=for-the-badge&logo=springboot)
+![Spring Security](https://img.shields.io/badge/Spring%20Security-6.4-green?style=for-the-badge&logo=springsecurity)
 ![JWT](https://img.shields.io/badge/JWT-Auth-black?style=for-the-badge&logo=jsonwebtokens)
-![Maven](https://img.shields.io/badge/Maven-Build-red?style=for-the-badge&logo=apachemaven)
-![H2](https://img.shields.io/badge/H2-Database-blue?style=for-the-badge)
+![MySQL](https://img.shields.io/badge/MySQL-Database-blue?style=for-the-badge&logo=mysql)
+![Railway](https://img.shields.io/badge/Railway-Deploy-black?style=for-the-badge&logo=railway)
 
-> API REST para controle de gastos e salários com autenticação JWT e recuperação de senha por email.
+> API REST para controle de gastos e salários com autenticação JWT, hospedada no Railway e conectada a um banco MySQL real.
 
 ---
 
 ## 📋 Sobre o Projeto
 
-O **Sistema de Controle Financeiro** é uma API backend desenvolvida em Java com Spring Boot, que permite ao usuário registrar seus gastos e salários, visualizar um resumo mensal com saldo e ainda conta com um sistema completo de autenticação com recuperação de senha por email.
+O **Sistema de Controle Financeiro** é o backend do meu projeto Full Stack. Desenvolvido em Java com Spring Boot, ele gerencia toda a lógica de gastos, salários e autenticação. Esta API está **100% online** e salva os dados de forma persistente no MySQL.
 
 ---
 
 ## ✨ Funcionalidades
 
-- ✅ Cadastro e login de usuários com JWT
-- ✅ Recuperação de senha por email com código de verificação
-- ✅ Cadastro, listagem e exclusão de gastos
-- ✅ Cadastro, listagem e exclusão de salários
-- ✅ Resumo mensal com total de gastos, salários e saldo
-- ✅ Mensagem motivacional baseada no saldo do mês
+- ✅ **Autenticação Segura:** Cadastro e login de usuários com JWT.
+- ✅ **Recuperação de Senha:** Sistema de envio de código por e-mail para redefinição de senha.
+- ✅ **Gestão Financeira:** Cadastro, listagem e exclusão de gastos e salários.
+- ✅ **Inteligência Mensal:** Resumo com total de gastos, entradas, saldo e mensagem motivacional.
+- ✅ **Persistência Real:** Dados salvos no MySQL do Railway.
 
 ---
 
@@ -32,32 +31,31 @@ O **Sistema de Controle Financeiro** é uma API backend desenvolvida em Java com
 
 | Tecnologia | Descrição |
 |---|---|
-| Java 17 | Linguagem principal |
-| Spring Boot 3.5 | Framework principal |
-| Spring Security | Autenticação e autorização |
-| JWT (jjwt 0.11.5) | Geração e validação de tokens |
-| Spring Data JPA | Persistência de dados |
-| H2 Database | Banco de dados em memória |
-| JavaMailSender | Envio de emails |
-| Maven | Gerenciador de dependências |
+| Java 17 | Linguagem principal do projeto |
+| Spring Boot 3.4.3 | Framework para a construção da API |
+| Spring Security | Proteção de rotas e criptografia de senhas |
+| JWT (jjwt) | Tokens seguros para manter o usuário logado |
+| Spring Data JPA | Interface para comunicação com o banco de dados |
+| MySQL | Banco de dados relacional (Produção) |
+| JavaMailSender | Serviço para envio de e-mails de recuperação |
+| Railway | Plataforma de Cloud para o Deploy do Backend |
 
 ---
 
 ## 📁 Estrutura de Pacotes
 
-```
 com.claudio.financeiro
 ├── controller      # Endpoints da API
 ├── service         # Regras de negócio
-├── repository      # Acesso ao banco de dados
+├── repository      # Acesso ao banco de dados MySQL
 ├── model           # Entidades JPA
 ├── dto             # Objetos de transferência de dados
-└── config          # Configurações de segurança
-```
+└── config          # Configurações de segurança e CORS
+
 
 ---
 
-## 🔗 Endpoints
+## 🔗 Endpoints Principais
 
 ### 🔐 Autenticação
 | Método | Endpoint | Descrição |
@@ -65,69 +63,30 @@ com.claudio.financeiro
 | POST | `/auth/registrar` | Cadastra novo usuário |
 | POST | `/auth/login` | Realiza login e retorna token JWT |
 | POST | `/auth/recuperar-senha` | Envia código de recuperação por email |
-| POST | `/auth/redefinir-senha` | Redefine a senha com o código recebido |
 
-### 💸 Gastos
+### 💸 Gestão (Protegido por JWT)
 | Método | Endpoint | Descrição |
 |---|---|---|
 | POST | `/gastos` | Cadastra um novo gasto |
 | GET | `/gastos` | Lista todos os gastos |
-| DELETE | `/gastos/{id}` | Remove um gasto |
-| GET | `/gastos/resumo` | Retorna o resumo mensal |
-
-### 💰 Salários
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/salario` | Cadastra um novo salário |
-| GET | `/salario` | Lista todos os salários |
-| DELETE | `/salario/{id}` | Remove um salário |
+| GET | `/gastos/resumo` | Retorna o resumo mensal financeiro |
 
 ---
 
 ## 📦 Como Rodar o Projeto
 
 ### Pré-requisitos
-- Java 17+
+- Java 17
 - Maven
 
 ### Passos
-
 ```bash
 # Clone o repositório
-git clone https://github.com/claudiondev/financeiro
+git clone [https://github.com/claudiondev/financeiro-backend](https://github.com/claudiondev/financeiro-backend)
 
-# Entre na pasta do projeto
-cd financeiro
-
-# Rode o projeto
+# Entre na pasta e rode o projeto
 ./mvnw spring-boot:run
-```
+A API estará disponível em http://localhost:8080 ou pelo link de produção do Railway.
 
-A API estará disponível em `http://localhost:8080`
-
----
-
-## 🔒 Autenticação
-
-A API utiliza **JWT (JSON Web Token)**. Após o login, você receberá um token que deve ser enviado no header de todas as requisições protegidas:
-
-```
-Authorization: Bearer {seu_token}
-```
-
----
-
-## 📧 Recuperação de Senha
-
-1. Envie seu email para `/auth/recuperar-senha`
-2. Você receberá um código de 6 dígitos no email
-3. Use o código em `/auth/redefinir-senha` junto com a nova senha
-
----
-
-## 👨‍💻 Autor
-
-Feito por **Claudio Nascimento**
-
-[![GitHub](https://img.shields.io/badge/GitHub-claudiondev-black?style=for-the-badge&logo=github)](https://github.com/claudiondev)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Claudio%20Nascimento-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/claudionascimento-dev/)
+👨‍💻 Autor
+Feito por Claudio Nascimento
