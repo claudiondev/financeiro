@@ -4,14 +4,15 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
-// Entidade que representa um salário no banco de dados
+
+
 
 @Entity
 @Table(name = "salarios")
-
 public class Salario {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Double valor;
     private Double comissao;
@@ -19,7 +20,19 @@ public class Salario {
     private String descricao;
     private LocalDate data;
 
+    // --- ADICIONE ESTA PARTE AQUI ---
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
 
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
+    }
+    // --------------------------------
 
     public Double getComissao() {
         return comissao;
@@ -37,11 +50,6 @@ public class Salario {
         this.adicional = adicional;
     }
 
-
-
-
-// Getters e Setters
-
     public Double getValor() {
         return valor;
     }
@@ -49,7 +57,6 @@ public class Salario {
     public void setValor(Double valor) {
         this.valor = valor;
     }
-
 
     public String getDescricao() {
         return descricao;
@@ -59,8 +66,6 @@ public class Salario {
         this.descricao = descricao;
     }
 
-
-
     public LocalDate getData() {
         return data;
     }
@@ -69,7 +74,6 @@ public class Salario {
         this.data = data;
     }
 
-
     public Long getId() {
         return id;
     }
@@ -77,6 +81,4 @@ public class Salario {
     public void setId(Long id) {
         this.id = id;
     }
-
-
 }

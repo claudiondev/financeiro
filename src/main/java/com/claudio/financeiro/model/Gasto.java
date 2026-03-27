@@ -1,16 +1,11 @@
 package com.claudio.financeiro.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 
-// Entidade que representa um gasto no banco de dados
 @Entity
 @Table(name = "gastos")
-
 public class Gasto {
-
-    // Identificador único gerado automaticamente pelo banco
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +16,20 @@ public class Gasto {
     private String categoria;
     private LocalDate data;
 
-    // Getters e Setters
+    // --- NOVO CAMPO: Relacionamento com o Usuário ---
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
+    // --- Getters e Setters ---
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
+    }
 
     public LocalDate getData() {
         return data;
@@ -30,8 +38,6 @@ public class Gasto {
     public void setData(LocalDate data) {
         this.data = data;
     }
-
-
 
     public Long getId() {
         return id;
@@ -64,5 +70,4 @@ public class Gasto {
     public void setCategoria(String categoria) {
         this.categoria = categoria;
     }
-
 }
