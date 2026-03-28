@@ -1,33 +1,21 @@
 package com.claudio.financeiro.model;
-
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import java.util.Collection;
 import java.util.List;
 
-// Entidade que representa um usuário no banco de dados
-// Implementa UserDetails para integração com o Spring Security
-
 @Entity
 @Table(name = "usuarios")
-
-
 public class Usuario implements UserDetails {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
     private Long id;
+
     private String email;
     private String senha;
-    private String codigoRecuperacao;    // Código enviado por email para redefinir senha
-
-
-    // Getters e Setters
-
+    private String codigoRecuperacao;
 
     public Long getId() {
         return id;
@@ -53,6 +41,13 @@ public class Usuario implements UserDetails {
         this.senha = senha;
     }
 
+    public String getCodigoRecuperacao() {
+        return codigoRecuperacao;
+    }
+
+    public void setCodigoRecuperacao(String codigoRecuperacao) {
+        this.codigoRecuperacao = codigoRecuperacao;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -69,13 +64,23 @@ public class Usuario implements UserDetails {
         return email;
     }
 
-    public String getCodigoRecuperacao() {
-        return codigoRecuperacao;
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
     }
 
-    public void setCodigoRecuperacao(String codigoRecuperacao) {
-        this.codigoRecuperacao = codigoRecuperacao;
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
     }
 
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }
