@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class GastoService {
@@ -30,6 +32,15 @@ public class GastoService {
 
     public void deletar(Long id) {
         gastoRepository.deleteById(id);
+    }
+
+    public Map<String, Double> resumoPorCategoria(Long usuarioId) {
+        List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId);
+        return gastos.stream()
+                .collect(Collectors.groupingBy(
+                        Gasto::getCategoria,
+                        Collectors.summingDouble(Gasto::getValor)
+                ));
     }
 
     // Alterado: O resumo agora recebe o ID do usuário logado

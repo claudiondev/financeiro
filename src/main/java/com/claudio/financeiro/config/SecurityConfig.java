@@ -1,4 +1,5 @@
 package com.claudio.financeiro.config;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +30,12 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(request -> {
                     var config = new CorsConfiguration();
-                    config.setAllowedOrigins(List.of("https://meu-financeiro-pessoal.vercel.app"));
+                    // LIBERANDO O LOCALHOST PARA O FRONT-END LOCAL
+                    config.setAllowedOrigins(List.of(
+                            "https://meu-financeiro-pessoal.vercel.app",
+                            "http://localhost:3000",
+                            "http://localhost:3001"
+                    ));
                     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
                     config.setAllowCredentials(true);

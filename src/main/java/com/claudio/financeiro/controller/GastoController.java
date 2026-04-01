@@ -4,11 +4,13 @@ import com.claudio.financeiro.dto.ResumoMensal;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.GastoService;
+import jdk.jfr.Category;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/gastos")
@@ -40,5 +42,11 @@ public class GastoController {
     public ResumoMensal resumo(Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         return gastoService.calcularResumo(usuarioLogado.getId());
+    }
+
+    @GetMapping("/categorias")
+    public Map<String, Double> resumoCategoria (Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return gastoService.resumoPorCategoria(usuarioLogado.getId());
     }
 }
