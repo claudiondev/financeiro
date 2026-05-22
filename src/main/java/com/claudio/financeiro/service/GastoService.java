@@ -34,6 +34,10 @@ public class GastoService {
         gastoRepository.deleteById(id);
     }
 
+    public List<Gasto> filtrarGastos(Long usuarioId, String categoria, Integer mes, Integer ano) {
+        return gastoRepository.findByFiltros(usuarioId, categoria, mes, ano);
+    }
+
     public Map<String, Double> resumoPorCategoria(Long usuarioId) {
         List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId);
         return gastos.stream()

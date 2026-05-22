@@ -4,7 +4,6 @@ import com.claudio.financeiro.dto.ResumoMensal;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.GastoService;
-import jdk.jfr.Category;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -49,4 +48,17 @@ public class GastoController {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         return gastoService.resumoPorCategoria(usuarioLogado.getId());
     }
+
+    @GetMapping("/filtrar")
+    public List<Gasto> filtrar(
+            Authentication authentication,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer ano
+    ) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return gastoService
+                .filtrarGastos(usuarioLogado.getId(), categoria, mes, ano);
+    }
+
 }
