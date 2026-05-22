@@ -1,10 +1,13 @@
 package com.claudio.financeiro.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
+
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 
 @Entity
 @Table(name = "usuarios")
@@ -15,9 +18,9 @@ public class Usuario implements UserDetails {
     private Long id;
 
     private String email;
-    @JsonIgnore
+    @JsonProperty(access = WRITE_ONLY)
     private String senha;
-    @JsonIgnore
+    @JsonProperty(access = WRITE_ONLY)
     private String codigoRecuperacao;
 
     public Long getId() {
@@ -58,7 +61,7 @@ public class Usuario implements UserDetails {
     }
 
     @Override
-    @JsonIgnore
+    @JsonProperty(access = WRITE_ONLY)
     public String getPassword() {
         return senha;
     }
