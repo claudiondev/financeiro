@@ -1,4 +1,5 @@
 package com.claudio.financeiro.model;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,7 +15,9 @@ public class Usuario implements UserDetails {
     private Long id;
 
     private String email;
+    @JsonIgnore
     private String senha;
+    @JsonIgnore
     private String codigoRecuperacao;
 
     public Long getId() {
@@ -55,6 +58,7 @@ public class Usuario implements UserDetails {
     }
 
     @Override
+    @JsonIgnore
     public String getPassword() {
         return senha;
     }
