@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -22,6 +23,8 @@ public class Usuario implements UserDetails {
     private String senha;
     @JsonProperty(access = WRITE_ONLY)
     private String codigoRecuperacao;
+    @JsonProperty(access = WRITE_ONLY)
+    private LocalDateTime codigoRecuperacaoExpiracao;
 
     public Long getId() {
         return id;
@@ -53,6 +56,14 @@ public class Usuario implements UserDetails {
 
     public void setCodigoRecuperacao(String codigoRecuperacao) {
         this.codigoRecuperacao = codigoRecuperacao;
+    }
+
+    public LocalDateTime getCodigoRecuperacaoExpiracao() {
+        return codigoRecuperacaoExpiracao;
+    }
+
+    public void setCodigoRecuperacaoExpiracao(LocalDateTime codigoRecuperacaoExpiracao) {
+        this.codigoRecuperacaoExpiracao = codigoRecuperacaoExpiracao;
     }
 
     @Override

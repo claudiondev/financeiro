@@ -12,7 +12,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/auth")
@@ -30,6 +31,8 @@ public class AuthController {
     @Autowired
     private JavaMailSender mailSender;
 
+    private static final SecureRandom secureRandom = new SecureRandom();
+
     @PostMapping("/registrar")
     public ResponseEntity<String> registrar(@RequestBody Usuario usuario) {
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
@@ -39,11 +42,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody Usuario usuario) {
+        // Mensagem genérica: não revela se o e-mail existe ou se a senha está errada
         Usuario encontrado = usuarioRepository.findByEmail(usuario.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+                .orElse(null);
 
-        if (!passwordEncoder.matches(usuario.getSenha(), encontrado.getSenha())) {
-            return ResponseEntity.status(401).body("Senha incorreta");
+        if (encontrado == null || !passwordEncoder.matches(usuario.getSenha(), encontrado.getSenha())) {
+            return ResponseEntity.status(401).body("Credenciais inválidas");
         }
 
         String token = jwtService.gerarToken(encontrado.getEmail());
@@ -52,33 +56,44 @@ public class AuthController {
 
     @PostMapping("/recuperar-senha")
     public ResponseEntity<String> recuperarSenha(@RequestBody EmailRequest request) {
-        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Email nao encontrado"));
+        usuarioRepository.findByEmail(request.getEmail()).ifPresent(usuario -> {
+            // SecureRandom em vez de Math.random() — criptograficamente seguro
+            String codigo = String.valueOf(secureRandom.nextInt(900000) + 100000);
+            usuario.setCodigoRecuperacao(codigo);
+            // Código válido por 15 minutos
+            usuario.setCodigoRecuperacaoExpiracao(LocalDateTime.now().plusMinutes(15));
+            usuarioRepository.save(usuario);
 
-        String codigo = String.valueOf((int)(Math.random() * 900000) + 100000);
-        usuario.setCodigoRecuperacao(codigo);
-        usuarioRepository.save(usuario);
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(request.getEmail());
+            message.setSubject("Recuperação de senha");
+            message.setText("Seu código de recuperação é: " + codigo + "\nEle expira em 15 minutos.");
+            mailSender.send(message);
+        });
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(request.getEmail());
-        message.setSubject("Recuperacao de senha");
-        message.setText("Seu codigo de recuperacao e: " + codigo);
-        mailSender.send(message);
-
-        return ResponseEntity.ok("Codigo enviado para o email!");
+        // Resposta genérica — não revela se o e-mail está cadastrado
+        return ResponseEntity.ok("Se o e-mail estiver cadastrado, você receberá as instruções em breve.");
     }
 
     @PostMapping("/redefinir-senha")
     public ResponseEntity<String> redefinirSenha(@RequestBody RedefinirSenhaRequest request) {
-        List<Usuario> usuarios = usuarioRepository.findAll();
-        for (Usuario usuario : usuarios) {
-            if (request.getCodigo().equals(usuario.getCodigoRecuperacao())) {
-                usuario.setSenha(passwordEncoder.encode(request.getNovaSenha()));
-                usuario.setCodigoRecuperacao(null); // Limpa o código após usar
-                usuarioRepository.save(usuario);
-                return ResponseEntity.ok("Senha redefinida com sucesso!");
-            }
+        Usuario usuario = usuarioRepository.findByCodigoRecuperacao(request.getCodigo())
+                .orElse(null);
+
+        if (usuario == null) {
+            return ResponseEntity.status(400).body("Código inválido.");
         }
-        return ResponseEntity.status(400).body("Codigo invalido!");
+
+        if (usuario.getCodigoRecuperacaoExpiracao() == null
+                || LocalDateTime.now().isAfter(usuario.getCodigoRecuperacaoExpiracao())) {
+            return ResponseEntity.status(400).body("Código expirado. Solicite um novo.");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(request.getNovaSenha()));
+        usuario.setCodigoRecuperacao(null);
+        usuario.setCodigoRecuperacaoExpiracao(null);
+        usuarioRepository.save(usuario);
+
+        return ResponseEntity.ok("Senha redefinida com sucesso!");
     }
 }

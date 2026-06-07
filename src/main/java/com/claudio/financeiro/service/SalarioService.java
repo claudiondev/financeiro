@@ -24,7 +24,14 @@ public class SalarioService {
         return salarioRepository.findByUsuarioId(usuarioId);
     }
 
-    public void deletar(Long id) {
+    public void deletar(Long id, Long usuarioId) {
+        Salario salario = salarioRepository.findById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Salário não encontrado"));
+        if (!salario.getUsuario().getId().equals(usuarioId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Acesso negado");
+        }
         salarioRepository.deleteById(id);
     }
 }

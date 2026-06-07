@@ -29,7 +29,8 @@ public class SalarioController {
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        salarioService.deletar(id);
+    public void deletar(@PathVariable Long id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        salarioService.deletar(id, usuarioLogado.getId());
     }
 }

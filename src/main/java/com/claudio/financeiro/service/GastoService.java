@@ -28,7 +28,14 @@ public class GastoService {
                 .collect(Collectors.toList());
     }
 
-    public void deletar(Long id) {
+    public void deletar(Long id, Long usuarioId) {
+        Gasto gasto = gastoRepository.findById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Gasto não encontrado"));
+        if (!gasto.getUsuario().getId().equals(usuarioId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Acesso negado");
+        }
         gastoRepository.deleteById(id);
     }
 

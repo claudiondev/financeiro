@@ -29,8 +29,9 @@ public class GastoController {
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        gastoService.deletar(id);
+    public void deletar(@PathVariable Long id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        gastoService.deletar(id, usuarioLogado.getId());
     }
 
     @GetMapping("/resumo")
