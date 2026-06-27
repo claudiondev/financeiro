@@ -5,6 +5,7 @@ import com.claudio.financeiro.dto.RedefinirSenhaRequest;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.UsuarioRepository;
 import com.claudio.financeiro.service.JwtService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
@@ -34,14 +35,17 @@ public class AuthController {
     private static final SecureRandom secureRandom = new SecureRandom();
 
     @PostMapping("/registrar")
-    public ResponseEntity<String> registrar(@RequestBody Usuario usuario) {
+    public ResponseEntity<String> registrar(@Valid @RequestBody Usuario usuario) {
+        if (usuarioRepository.findByEmail(usuario.getEmail()).isPresent()) {
+            return ResponseEntity.status(409).body("E-mail já cadastrado.");
+        }
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         usuarioRepository.save(usuario);
         return ResponseEntity.ok("Usuario registrado com sucesso!");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody Usuario usuario) {
+    public ResponseEntity<String> login(@Valid @RequestBody Usuario usuario) {
         // Mensagem genérica: não revela se o e-mail existe ou se a senha está errada
         Usuario encontrado = usuarioRepository.findByEmail(usuario.getEmail())
                 .orElse(null);
@@ -55,7 +59,7 @@ public class AuthController {
     }
 
     @PostMapping("/recuperar-senha")
-    public ResponseEntity<String> recuperarSenha(@RequestBody EmailRequest request) {
+    public ResponseEntity<String> recuperarSenha(@Valid @RequestBody EmailRequest request) {
         usuarioRepository.findByEmail(request.getEmail()).ifPresent(usuario -> {
             // SecureRandom em vez de Math.random() — criptograficamente seguro
             String codigo = String.valueOf(secureRandom.nextInt(900000) + 100000);
@@ -76,7 +80,7 @@ public class AuthController {
     }
 
     @PostMapping("/redefinir-senha")
-    public ResponseEntity<String> redefinirSenha(@RequestBody RedefinirSenhaRequest request) {
+    public ResponseEntity<String> redefinirSenha(@Valid @RequestBody RedefinirSenhaRequest request) {
         Usuario usuario = usuarioRepository.findByCodigoRecuperacao(request.getCodigo())
                 .orElse(null);
 
