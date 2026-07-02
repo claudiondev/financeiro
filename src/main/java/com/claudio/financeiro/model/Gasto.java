@@ -7,13 +7,7 @@ import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDate;
 
-/**
- * Entidade que representa um gasto do usuário.
- *
- * As anotações @NotBlank, @NotNull e @Positive são ativadas pelo @Valid no
- * controller e retornam 400 Bad Request automaticamente se violadas, sem
- * precisar de if/else manual no código de negócio.
- */
+/** Gasto do usuário. As validações são aplicadas via @Valid no controller (400 automático). */
 @Entity
 @Table(name = "gastos")
 public class Gasto {
@@ -35,11 +29,6 @@ public class Gasto {
     @NotNull
     private LocalDate data;
 
-    /**
-     * Relacionamento N:1 com Usuario.
-     * Cada gasto pertence a um único usuário; um usuário pode ter muitos gastos.
-     * A coluna "usuario_id" no banco é a chave estrangeira que materializa essa relação.
-     */
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;

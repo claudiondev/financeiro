@@ -9,7 +9,6 @@
 
     public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
-        // Este método é essencial para filtrar os gastos pelo dono da conta
         List<Gasto> findByUsuarioId(Long usuarioId);
 
         @Query("SELECT g FROM Gasto g WHERE g.usuario.id = :usuarioId " +

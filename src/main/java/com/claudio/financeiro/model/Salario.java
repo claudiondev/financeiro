@@ -7,11 +7,8 @@ import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
 /**
- * Entidade que representa uma entrada de salário ou renda do usuário.
- *
- * Campos opcionais (comissao, adicional, descricao) permitem registrar
- * diferentes composições de renda: salário fixo, comissão de vendas,
- * adicionais de hora extra, bônus, etc.
+ * Entrada de salário ou renda do usuário. Os campos comissao/adicional/descricao
+ * são opcionais para acomodar salário fixo, comissão, hora extra, bônus etc.
  */
 @Entity
 @Table(name = "salarios")
@@ -32,10 +29,6 @@ public class Salario {
     @NotNull
     private LocalDate data;
 
-    /**
-     * Relacionamento N:1 com Usuario.
-     * Cada salário pertence a um único usuário.
-     */
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;

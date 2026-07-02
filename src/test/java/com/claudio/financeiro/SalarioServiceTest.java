@@ -19,13 +19,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Testes unitários do SalarioService.
- *
- * Cobre os mesmos cenários críticos de segurança do GastoService:
- * deleção com verificação de ownership (proteção contra IDOR) e
- * comportamento correto quando o registro não existe (404).
- */
 @ExtendWith(MockitoExtension.class)
 class SalarioServiceTest {
 
@@ -35,13 +28,6 @@ class SalarioServiceTest {
     @InjectMocks
     private SalarioService salarioService;
 
-    // -------------------------------------------------------------------------
-    // salvar()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Verifica que salvar() persiste o salário e retorna o objeto salvo.
-     */
     @Test
     void deveSalvarSalarioERetornarORegistro() {
         Salario salario = salarioComUsuario(1L, 3000.0);
@@ -53,14 +39,6 @@ class SalarioServiceTest {
         verify(salarioRepository).save(salario);
     }
 
-    // -------------------------------------------------------------------------
-    // listarPorUsuario()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Verifica que listarPorUsuario() usa o ID correto como filtro.
-     * Importante: não deve retornar salários de outros usuários.
-     */
     @Test
     void deveListarSalariosFiltradosPeloUsuario() {
         Salario s1 = salarioComUsuario(1L, 3000.0);
@@ -74,13 +52,6 @@ class SalarioServiceTest {
         verify(salarioRepository).findByUsuarioId(1L);
     }
 
-    // -------------------------------------------------------------------------
-    // deletar()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Cenário feliz: dono do salário consegue deletar normalmente.
-     */
     @Test
     void deveDeletarSalarioQuandoUsuarioEhODono() {
         Salario salario = salarioComUsuario(1L, 3000.0);
@@ -91,29 +62,21 @@ class SalarioServiceTest {
         verify(salarioRepository).deleteById(5L);
     }
 
-    /**
-     * Cenário de segurança (IDOR): usuário tenta deletar salário de outra pessoa.
-     * Esperamos 403 FORBIDDEN e garantimos que deleteById NUNCA é chamado.
-     *
-     * Este é o teste da correção C4 do relatório de segurança (SalarioService).
-     */
+    // IDOR: usuário 2 tenta deletar salário do usuário 1
     @Test
     void deveLancarForbiddenAoDeletarSalarioDeOutroUsuario() {
-        Salario salario = salarioComUsuario(1L, 3000.0); // pertence ao usuário 1
+        Salario salario = salarioComUsuario(1L, 3000.0);
         when(salarioRepository.findById(5L)).thenReturn(Optional.of(salario));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> salarioService.deletar(5L, 2L) // usuário 2 tenta apagar
+                () -> salarioService.deletar(5L, 2L)
         );
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(salarioRepository, never()).deleteById(any());
     }
 
-    /**
-     * Cenário de salário inexistente: retorna 404 NOT FOUND.
-     */
     @Test
     void deveLancarNotFoundAoDeletarSalarioInexistente() {
         when(salarioRepository.findById(99L)).thenReturn(Optional.empty());
@@ -126,10 +89,6 @@ class SalarioServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(salarioRepository, never()).deleteById(any());
     }
-
-    // -------------------------------------------------------------------------
-    // Método auxiliar
-    // -------------------------------------------------------------------------
 
     private Salario salarioComUsuario(Long usuarioId, Double valor) {
         Usuario usuario = new Usuario();

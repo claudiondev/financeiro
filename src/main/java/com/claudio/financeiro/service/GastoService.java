@@ -26,10 +26,6 @@ public class GastoService {
     @Autowired
     private SalarioRepository salarioRepository;
 
-    // -------------------------------------------------------------------------
-    // Operações básicas CRUD
-    // -------------------------------------------------------------------------
-
     public Gasto salvar(Gasto gasto) {
         return gastoRepository.save(gasto);
     }
@@ -41,14 +37,7 @@ public class GastoService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Remove um gasto, mas só se ele pertencer ao usuário que está fazendo a requisição.
-     *
-     * Por que validar ownership no serviço e não no controller?
-     * O serviço é a camada que conhece as regras de negócio. Se um dia existir
-     * outro ponto de entrada (ex: agendamento, API interna), a proteção contra
-     * IDOR continuará funcionando sem precisar duplicar a verificação.
-     */
+    // Verifica ownership antes de deletar, para evitar IDOR (usuário apagando gasto de outro)
     public void deletar(Long id, Long usuarioId) {
         Gasto gasto = gastoRepository.findById(id)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
@@ -69,21 +58,6 @@ public class GastoService {
                 .collect(Collectors.toList());
     }
 
-    // -------------------------------------------------------------------------
-    // Dashboard — resumo financeiro geral
-    // -------------------------------------------------------------------------
-
-    /**
-     * Calcula o resumo financeiro completo do usuário.
-     *
-     * Carregamos gastos e salários em memória e fazemos todos os cálculos
-     * em uma única passagem — evitando N+1 queries ao banco.
-     *
-     * O método enriquece o ResumoMensal com:
-     *   - maiorGasto: destaque no card principal do dashboard
-     *   - categorias: dados para o gráfico de pizza
-     *   - transacoesRecentes: últimas 5 movimentações para a timeline
-     */
     public ResumoMensal calcularResumo(Long usuarioId) {
         List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId);
         List<Salario> salarios = salarioRepository.findByUsuarioId(usuarioId);
@@ -98,13 +72,11 @@ public class GastoService {
 
         Double saldo = totalSalario - totalGastos;
 
-        // Maior gasto individual (0.0 se não houver gastos)
         Double maiorGasto = gastos.stream()
                 .mapToDouble(Gasto::getValor)
                 .max()
                 .orElse(0.0);
 
-        // Agrupamento por categoria para o gráfico de pizza
         Map<String, Double> porCategoria = gastos.stream()
                 .filter(g -> g.getCategoria() != null)
                 .collect(Collectors.groupingBy(
@@ -112,7 +84,6 @@ public class GastoService {
                         Collectors.summingDouble(Gasto::getValor)
                 ));
 
-        // Últimas 5 transações ordenadas por data decrescente
         List<TransacaoDTO> recentes = gastos.stream()
                 .sorted(ordenarPorDataDecrescente())
                 .limit(5)
@@ -143,22 +114,14 @@ public class GastoService {
         return resumo;
     }
 
-    // -------------------------------------------------------------------------
-    // Página de Relatórios — análise mensal por categoria
-    // -------------------------------------------------------------------------
-
     /**
-     * Gera o relatório mensal por categoria de gasto.
-     *
-     * @param usuarioId ID do usuário autenticado
-     * @param mes       mês desejado (1-12), ou null para todos os meses
-     * @param ano       ano desejado (ex: 2026), ou null para todos os anos
+     * @param mes mês desejado (1-12), ou null para todos os meses
+     * @param ano ano desejado, ou null para todos os anos
      */
     public RelatorioMensalDTO getRelatorio(Long usuarioId, Integer mes, Integer ano) {
-        // Gastos filtrados por período via query JPQL parametrizada
         List<Gasto> gastosFiltrados = gastoRepository.findByFiltros(usuarioId, null, mes, ano);
 
-        // Salários do período filtrados em memória (evita query extra no repositório)
+        // Salários filtrados em memória (evita adicionar mais uma query no repositório)
         List<Salario> salariosDoMes = salarioRepository.findByUsuarioId(usuarioId)
                 .stream()
                 .filter(s -> salariosNoPeriodo(s, mes, ano))
@@ -174,7 +137,6 @@ public class GastoService {
                         valorSeguro(s.getAdicional()))
                 .sum();
 
-        // Monta a lista de categorias com valor, percentual e média
         List<RelatorioMensalDTO.CategoriaDTO> categorias = gastosFiltrados.stream()
                 .filter(g -> g.getCategoria() != null)
                 .collect(Collectors.groupingBy(
@@ -190,19 +152,14 @@ public class GastoService {
                             entry.getKey(),
                             entry.getValue(),
                             Math.round(percentual * 100.0) / 100.0,
-                            entry.getValue() // média = valor do período (veja Javadoc da classe)
+                            entry.getValue()
                     );
                 })
-                // Ordena da categoria com maior gasto para a menor
                 .sorted(Comparator.comparingDouble(RelatorioMensalDTO.CategoriaDTO::getValor).reversed())
                 .collect(Collectors.toList());
 
         return new RelatorioMensalDTO(categorias, totalEntradas, totalSaidas);
     }
-
-    // -------------------------------------------------------------------------
-    // Endpoints de categorias e resumo
-    // -------------------------------------------------------------------------
 
     public Map<String, Double> resumoPorCategoria(Long usuarioId) {
         return gastoRepository.findByUsuarioId(usuarioId).stream()
@@ -213,19 +170,6 @@ public class GastoService {
                 ));
     }
 
-    // -------------------------------------------------------------------------
-    // Conversão Entidade → DTO (público para uso nos controllers)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Converte uma entidade Gasto para GastoDTO.
-     *
-     * Por que público?
-     * O GastoController precisa chamar este método ao retornar o resultado
-     * do POST /gastos. Mantemos a conversão no serviço (não no controller)
-     * para que a lógica de mapeamento fique centralizada — se o DTO mudar,
-     * só este método precisa ser atualizado.
-     */
     public GastoDTO toDTO(Gasto gasto) {
         GastoDTO dto = new GastoDTO();
         dto.setId(gasto.getId());
@@ -237,19 +181,12 @@ public class GastoService {
         return dto;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares privados
-    // -------------------------------------------------------------------------
-
-    /** Trata campos nullable (comissao, adicional) como zero quando ausentes. */
+    // comissao/adicional são opcionais no cadastro; tratamos null como 0
     private double valorSeguro(Double valor) {
         return valor != null ? valor : 0.0;
     }
 
-    /**
-     * Comparator que ordena gastos por data decrescente, tratando datas nulas
-     * (que não podem ocorrer em produção por @NotNull, mas podem aparecer em testes).
-     */
+    // Datas nulas não ocorrem em produção (@NotNull), mas podem aparecer em testes
     private Comparator<Gasto> ordenarPorDataDecrescente() {
         return (a, b) -> {
             LocalDate da = a.getData();
@@ -261,7 +198,6 @@ public class GastoService {
         };
     }
 
-    /** Verifica se um salário se enquadra no período (mes/ano) solicitado. */
     private boolean salariosNoPeriodo(Salario s, Integer mes, Integer ano) {
         if (s.getData() == null) return false;
         boolean mesOk = (mes == null) || (s.getData().getMonthValue() == mes);

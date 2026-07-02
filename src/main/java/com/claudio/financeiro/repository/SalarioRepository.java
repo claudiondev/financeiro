@@ -6,6 +6,5 @@ import java.util.List;
 
 public interface SalarioRepository extends JpaRepository<Salario, Long> {
 
-    // Essencial para o cálculo do resumo mensal individual
     List<Salario> findByUsuarioId(Long usuarioId);
 }

@@ -23,16 +23,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Testes unitários do GastoService.
- *
- * Usamos @ExtendWith(MockitoExtension.class) em vez de @SpringBootTest porque
- * queremos testar APENAS a lógica do service, sem subir o contexto do Spring,
- * sem banco de dados, sem rede. É mais rápido e mais focado.
- *
- * @Mock cria objetos falsos dos repositórios.
- * @InjectMocks cria o GastoService real e injeta os mocks dentro dele.
- */
 @ExtendWith(MockitoExtension.class)
 class GastoServiceTest {
 
@@ -45,14 +35,6 @@ class GastoServiceTest {
     @InjectMocks
     private GastoService gastoService;
 
-    // -------------------------------------------------------------------------
-    // salvar()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Verifica que salvar() delega ao repositório e retorna o gasto salvo.
-     * Confirma que o service não altera o objeto nem ignora o retorno do banco.
-     */
     @Test
     void deveSalvarGastoERetornarORegistro() {
         Gasto gasto = gastoComUsuario(1L);
@@ -64,14 +46,6 @@ class GastoServiceTest {
         verify(gastoRepository).save(gasto);
     }
 
-    // -------------------------------------------------------------------------
-    // listarPorUsuario()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Verifica que listarPorUsuario() filtra pelo ID correto e converte
-     * os Gastos para GastoDTOs (sem expor o objeto Usuario inteiro).
-     */
     @Test
     void deveListarGastosFiltradosPeloUsuario() {
         Gasto g1 = gastoComValor(1L, "Aluguel", 1500.0);
@@ -86,14 +60,6 @@ class GastoServiceTest {
         verify(gastoRepository).findByUsuarioId(1L);
     }
 
-    // -------------------------------------------------------------------------
-    // deletar()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Cenário feliz: dono do gasto consegue deletar normalmente.
-     * Verifica que deleteById é chamado com o ID correto.
-     */
     @Test
     void deveDeletarGastoQuandoUsuarioEhODono() {
         Gasto gasto = gastoComUsuario(1L);
@@ -104,30 +70,21 @@ class GastoServiceTest {
         verify(gastoRepository).deleteById(10L);
     }
 
-    /**
-     * Cenário de segurança (IDOR): usuário tenta deletar gasto de outra pessoa.
-     * Esperamos 403 FORBIDDEN e garantimos que deleteById NUNCA é chamado.
-     *
-     * Este é o teste da correção C4 do relatório de segurança.
-     */
+    // IDOR: usuário 2 tenta deletar gasto do usuário 1
     @Test
     void deveLancarForbiddenAoDeletarGastoDeOutroUsuario() {
-        Gasto gasto = gastoComUsuario(1L); // gasto pertence ao usuário 1
+        Gasto gasto = gastoComUsuario(1L);
         when(gastoRepository.findById(10L)).thenReturn(Optional.of(gasto));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> gastoService.deletar(10L, 2L) // usuário 2 tenta apagar
+                () -> gastoService.deletar(10L, 2L)
         );
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        verify(gastoRepository, never()).deleteById(any()); // deleção não ocorre
+        verify(gastoRepository, never()).deleteById(any());
     }
 
-    /**
-     * Cenário de gasto inexistente: retorna 404 NOT FOUND.
-     * Garante que o service não tenta deletar algo que não existe.
-     */
     @Test
     void deveLancarNotFoundAoDeletarGastoInexistente() {
         when(gastoRepository.findById(99L)).thenReturn(Optional.empty());
@@ -141,14 +98,6 @@ class GastoServiceTest {
         verify(gastoRepository, never()).deleteById(any());
     }
 
-    // -------------------------------------------------------------------------
-    // calcularResumo()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Saldo positivo: salário maior que os gastos.
-     * Verifica o cálculo e a mensagem de parabéns.
-     */
     @Test
     void deveCalcularResumoComSaldoPositivo() {
         when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(gastoSimples(600.0)));
@@ -160,10 +109,6 @@ class GastoServiceTest {
         assertEquals("Parabéns! Você economizou esse mês!", resultado.getMensagem());
     }
 
-    /**
-     * Saldo negativo: gastos maiores que o salário.
-     * Verifica o cálculo e a mensagem de alerta.
-     */
     @Test
     void deveCalcularResumoComSaldoNegativo() {
         when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(gastoSimples(1000.0)));
@@ -175,10 +120,6 @@ class GastoServiceTest {
         assertEquals("Atenção! Seus gastos ultrapassaram o salário!", resultado.getMensagem());
     }
 
-    /**
-     * Sem gastos no mês: saldo deve ser igual ao salário.
-     * Garante que a lista vazia não causa NullPointerException.
-     */
     @Test
     void deveCalcularResumoSemGastosNoMes() {
         when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of());
@@ -189,10 +130,6 @@ class GastoServiceTest {
         assertEquals(2000.0, resultado.getSaldo());
         assertEquals(0.0, resultado.getTotalGasto());
     }
-
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares — evitam repetição nos testes
-    // -------------------------------------------------------------------------
 
     private Gasto gastoComUsuario(Long usuarioId) {
         Usuario usuario = new Usuario();

@@ -20,12 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Testes unitários do AuthController.
- *
- * Usa mocks para todas as dependências (repositório, encoder, JWT, e-mail)
- * para que cada teste valide apenas a lógica do controller isoladamente.
- */
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
@@ -44,13 +38,6 @@ class AuthControllerTest {
     @InjectMocks
     private AuthController authController;
 
-    // -------------------------------------------------------------------------
-    // registrar()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Cadastro com e-mail novo deve salvar o usuário e retornar 200.
-     */
     @Test
     void deveRegistrarUsuarioComEmailNovo() {
         Usuario usuario = usuario("novo@teste.com", "123456");
@@ -65,13 +52,6 @@ class AuthControllerTest {
         verify(usuarioRepository).save(any());
     }
 
-    /**
-     * Cadastro com e-mail já existente deve retornar 409 Conflict
-     * e NÃO salvar nada no banco.
-     *
-     * Este teste cobre o bug de e-mail duplicado descoberto durante os
-     * testes manuais de endpoint.
-     */
     @Test
     void deveRejeitarRegistroComEmailJaCadastrado() {
         Usuario existente = usuario("existente@teste.com", "senhaHash");
@@ -82,16 +62,9 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.CONFLICT, resposta.getStatusCode());
         assertEquals("E-mail já cadastrado.", resposta.getBody());
-        verify(usuarioRepository, never()).save(any()); // banco não é tocado
+        verify(usuarioRepository, never()).save(any());
     }
 
-    // -------------------------------------------------------------------------
-    // login()
-    // -------------------------------------------------------------------------
-
-    /**
-     * Login com credenciais corretas deve retornar o token JWT.
-     */
     @Test
     void deveRetornarTokenNoLoginComCredenciaisCorretas() {
         Usuario usuario = usuario("claudio@teste.com", "hashDaSenha");
@@ -107,10 +80,7 @@ class AuthControllerTest {
         assertEquals("jwt.token.aqui", resposta.getBody());
     }
 
-    /**
-     * Login com e-mail não cadastrado deve retornar 401 com mensagem genérica.
-     * Não deve revelar que o e-mail não existe (proteção contra enumeração).
-     */
+    // Mensagem genérica: não deve revelar que o e-mail não existe (proteção contra enumeração)
     @Test
     void deveRetornarMensagemGenericaParaEmailNaoCadastrado() {
         when(usuarioRepository.findByEmail("inexistente@teste.com"))
@@ -122,10 +92,6 @@ class AuthControllerTest {
         assertEquals("Credenciais inválidas", resposta.getBody());
     }
 
-    /**
-     * Login com senha errada deve retornar 401 com a mesma mensagem genérica.
-     * A mensagem é idêntica à do e-mail errado — não revela qual dos dois falhou.
-     */
     @Test
     void deveRetornarMensagemGenericaParaSenhaErrada() {
         Usuario usuario = usuario("claudio@teste.com", "hashCorreto");
@@ -138,10 +104,6 @@ class AuthControllerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, resposta.getStatusCode());
         assertEquals("Credenciais inválidas", resposta.getBody());
     }
-
-    // -------------------------------------------------------------------------
-    // Método auxiliar
-    // -------------------------------------------------------------------------
 
     private Usuario usuario(String email, String senha) {
         Usuario u = new Usuario();
