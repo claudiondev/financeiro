@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /** Formato unificado de gastos e salários para a lista de transações recentes do dashboard. */
@@ -19,7 +20,7 @@ public class TransacaoDTO {
     private String categoria;
 
     private LocalDate data;
-    private Double valor;
+    private BigDecimal valor;
 
     /** "entrada" ou "saida" — usado pelo frontend para colorir a exibição. */
     private String tipo;

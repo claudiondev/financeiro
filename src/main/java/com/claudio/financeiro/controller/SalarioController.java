@@ -1,7 +1,7 @@
 package com.claudio.financeiro.controller;
 
+import com.claudio.financeiro.dto.CriarSalarioRequest;
 import com.claudio.financeiro.dto.SalarioDTO;
-import com.claudio.financeiro.model.Salario;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.SalarioService;
 import jakarta.validation.Valid;
@@ -20,11 +20,9 @@ public class SalarioController {
     private SalarioService salarioService;
 
     @PostMapping
-    public SalarioDTO criar(@Valid @RequestBody Salario salario, Authentication authentication) {
+    public SalarioDTO criar(@Valid @RequestBody CriarSalarioRequest request, Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        salario.setUsuario(usuarioLogado);
-        Salario salvo = salarioService.salvar(salario);
-        return salarioService.toDTO(salvo);
+        return salarioService.criar(request, usuarioLogado);
     }
 
     @GetMapping
@@ -34,6 +32,12 @@ public class SalarioController {
                 .stream()
                 .map(salarioService::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    @PutMapping("/{id}")
+    public SalarioDTO atualizar(@PathVariable Long id, @Valid @RequestBody CriarSalarioRequest request, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return salarioService.atualizar(id, request, usuarioLogado.getId());
     }
 
     @DeleteMapping("/{id}")

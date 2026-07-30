@@ -1,5 +1,7 @@
 package com.claudio.financeiro.dto;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,17 +9,20 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Resposta de operações de Salário — substitui o objeto Usuario completo por usuarioId. */
+/** Dados de entrada para criar um salário — evita expor a entidade JPA diretamente no @RequestBody. */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SalarioDTO {
+public class CriarSalarioRequest {
 
-    private Long id;
+    @NotNull
+    @Positive
     private BigDecimal valor;
+
     private BigDecimal comissao;
     private BigDecimal adicional;
     private String descricao;
+
+    @NotNull
     private LocalDate data;
-    private Long usuarioId;
 }

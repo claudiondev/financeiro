@@ -1,20 +1,31 @@
 package com.claudio.financeiro.service;
 
+import com.claudio.financeiro.dto.CriarGastoRequest;
+import com.claudio.financeiro.dto.EvolucaoMensalDTO;
 import com.claudio.financeiro.dto.GastoDTO;
 import com.claudio.financeiro.dto.RelatorioMensalDTO;
 import com.claudio.financeiro.dto.ResumoMensal;
 import com.claudio.financeiro.dto.TransacaoDTO;
+import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Salario;
+import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.SalarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +36,20 @@ public class GastoService {
 
     @Autowired
     private SalarioRepository salarioRepository;
+
+    public GastoDTO criar(CriarGastoRequest request, Usuario usuarioLogado) {
+        Gasto gasto = paraEntidade(request, usuarioLogado);
+        return toDTO(salvar(gasto));
+    }
+
+    public GastoDTO atualizar(Long id, CriarGastoRequest request, Long usuarioId) {
+        Gasto gasto = buscarComOwnership(id, usuarioId);
+        gasto.setDescricao(request.getDescricao());
+        gasto.setValor(request.getValor());
+        gasto.setCategoria(request.getCategoria());
+        gasto.setData(request.getData());
+        return toDTO(salvar(gasto));
+    }
 
     public Gasto salvar(Gasto gasto) {
         return gastoRepository.save(gasto);
@@ -39,19 +64,11 @@ public class GastoService {
 
     // Verifica ownership antes de deletar, para evitar IDOR (usuário apagando gasto de outro)
     public void deletar(Long id, Long usuarioId) {
-        Gasto gasto = gastoRepository.findById(id)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Gasto não encontrado"));
-
-        if (!gasto.getUsuario().getId().equals(usuarioId)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Acesso negado");
-        }
-
+        buscarComOwnership(id, usuarioId);
         gastoRepository.deleteById(id);
     }
 
-    public List<GastoDTO> filtrarGastos(Long usuarioId, String categoria, Integer mes, Integer ano) {
+    public List<GastoDTO> filtrarGastos(Long usuarioId, CategoriaGasto categoria, Integer mes, Integer ano) {
         return gastoRepository.findByFiltros(usuarioId, categoria, mes, ano)
                 .stream()
                 .map(this::toDTO)
@@ -62,27 +79,16 @@ public class GastoService {
         List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId);
         List<Salario> salarios = salarioRepository.findByUsuarioId(usuarioId);
 
-        Double totalGastos = gastos.stream().mapToDouble(Gasto::getValor).sum();
+        BigDecimal totalGastos = somar(gastos, Gasto::getValor);
+        BigDecimal totalSalario = somarRendaTotal(salarios);
+        BigDecimal saldo = totalSalario.subtract(totalGastos);
 
-        Double totalSalario = salarios.stream().mapToDouble(s ->
-                valorSeguro(s.getValor()) +
-                valorSeguro(s.getComissao()) +
-                valorSeguro(s.getAdicional())
-        ).sum();
+        BigDecimal maiorGasto = gastos.stream()
+                .map(Gasto::getValor)
+                .max(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
 
-        Double saldo = totalSalario - totalGastos;
-
-        Double maiorGasto = gastos.stream()
-                .mapToDouble(Gasto::getValor)
-                .max()
-                .orElse(0.0);
-
-        Map<String, Double> porCategoria = gastos.stream()
-                .filter(g -> g.getCategoria() != null)
-                .collect(Collectors.groupingBy(
-                        Gasto::getCategoria,
-                        Collectors.summingDouble(Gasto::getValor)
-                ));
+        Map<String, BigDecimal> porCategoria = agruparPorCategoria(gastos);
 
         List<TransacaoDTO> recentes = gastos.stream()
                 .sorted(ordenarPorDataDecrescente())
@@ -90,7 +96,7 @@ public class GastoService {
                 .map(g -> new TransacaoDTO(
                         g.getId(),
                         g.getDescricao(),
-                        g.getCategoria(),
+                        g.getCategoria() != null ? g.getCategoria().name() : null,
                         g.getData(),
                         g.getValor(),
                         "saida"
@@ -105,9 +111,9 @@ public class GastoService {
         resumo.setCategorias(porCategoria);
         resumo.setTransacoesRecentes(recentes);
 
-        if (saldo > 0) {
+        if (saldo.compareTo(BigDecimal.ZERO) > 0) {
             resumo.setMensagem("Parabéns! Você economizou esse mês!");
-        } else if (saldo < 0) {
+        } else if (saldo.compareTo(BigDecimal.ZERO) < 0) {
             resumo.setMensagem("Atenção! Seus gastos ultrapassaram o salário!");
         }
 
@@ -127,47 +133,52 @@ public class GastoService {
                 .filter(s -> salariosNoPeriodo(s, mes, ano))
                 .collect(Collectors.toList());
 
-        Double totalSaidas = gastosFiltrados.stream()
-                .mapToDouble(Gasto::getValor)
-                .sum();
-
-        Double totalEntradas = salariosDoMes.stream()
-                .mapToDouble(s -> valorSeguro(s.getValor()) +
-                        valorSeguro(s.getComissao()) +
-                        valorSeguro(s.getAdicional()))
-                .sum();
+        BigDecimal totalSaidas = somar(gastosFiltrados, Gasto::getValor);
+        BigDecimal totalEntradas = somarRendaTotal(salariosDoMes);
 
         List<RelatorioMensalDTO.CategoriaDTO> categorias = gastosFiltrados.stream()
                 .filter(g -> g.getCategoria() != null)
                 .collect(Collectors.groupingBy(
-                        Gasto::getCategoria,
-                        Collectors.summingDouble(Gasto::getValor)
+                        g -> g.getCategoria().name(),
+                        Collectors.reducing(BigDecimal.ZERO, Gasto::getValor, BigDecimal::add)
                 ))
                 .entrySet().stream()
-                .map(entry -> {
-                    double percentual = totalSaidas > 0
-                            ? (entry.getValue() / totalSaidas) * 100
-                            : 0.0;
-                    return new RelatorioMensalDTO.CategoriaDTO(
-                            entry.getKey(),
-                            entry.getValue(),
-                            Math.round(percentual * 100.0) / 100.0,
-                            entry.getValue()
-                    );
-                })
-                .sorted(Comparator.comparingDouble(RelatorioMensalDTO.CategoriaDTO::getValor).reversed())
+                .map(entry -> new RelatorioMensalDTO.CategoriaDTO(
+                        entry.getKey(),
+                        entry.getValue(),
+                        calcularPercentual(entry.getValue(), totalSaidas),
+                        entry.getValue()
+                ))
+                .sorted(Comparator.comparing(RelatorioMensalDTO.CategoriaDTO::getValor).reversed())
                 .collect(Collectors.toList());
 
         return new RelatorioMensalDTO(categorias, totalEntradas, totalSaidas);
     }
 
-    public Map<String, Double> resumoPorCategoria(Long usuarioId) {
-        return gastoRepository.findByUsuarioId(usuarioId).stream()
-                .filter(g -> g.getCategoria() != null)
-                .collect(Collectors.groupingBy(
-                        Gasto::getCategoria,
-                        Collectors.summingDouble(Gasto::getValor)
-                ));
+    public Map<String, BigDecimal> resumoPorCategoria(Long usuarioId) {
+        return agruparPorCategoria(gastoRepository.findByUsuarioId(usuarioId));
+    }
+
+    /** Série histórica mês a mês (mais antigo primeiro), para o gráfico de evolução. */
+    public List<EvolucaoMensalDTO> getEvolucaoMensal(Long usuarioId, int meses) {
+        int mesesValidados = Math.max(1, Math.min(meses, 24));
+        List<Salario> todosSalarios = salarioRepository.findByUsuarioId(usuarioId);
+        List<EvolucaoMensalDTO> evolucao = new ArrayList<>();
+
+        for (int i = mesesValidados - 1; i >= 0; i--) {
+            YearMonth referencia = YearMonth.now().minusMonths(i);
+            int mes = referencia.getMonthValue();
+            int ano = referencia.getYear();
+
+            BigDecimal totalSaidas = somar(gastoRepository.findByFiltros(usuarioId, null, mes, ano), Gasto::getValor);
+            BigDecimal totalEntradas = somarRendaTotal(
+                    todosSalarios.stream().filter(s -> salariosNoPeriodo(s, mes, ano)).collect(Collectors.toList())
+            );
+
+            evolucao.add(new EvolucaoMensalDTO(mes, ano, totalEntradas, totalSaidas, totalEntradas.subtract(totalSaidas)));
+        }
+
+        return evolucao;
     }
 
     public GastoDTO toDTO(Gasto gasto) {
@@ -181,9 +192,63 @@ public class GastoService {
         return dto;
     }
 
+    private Gasto paraEntidade(CriarGastoRequest request, Usuario usuarioLogado) {
+        Gasto gasto = new Gasto();
+        gasto.setDescricao(request.getDescricao());
+        gasto.setValor(request.getValor());
+        gasto.setCategoria(request.getCategoria());
+        gasto.setData(request.getData());
+        gasto.setUsuario(usuarioLogado);
+        return gasto;
+    }
+
+    private Gasto buscarComOwnership(Long id, Long usuarioId) {
+        Gasto gasto = gastoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto não encontrado"));
+
+        if (!gasto.getUsuario().getId().equals(usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+        }
+
+        return gasto;
+    }
+
+    private Map<String, BigDecimal> agruparPorCategoria(List<Gasto> gastos) {
+        return gastos.stream()
+                .filter(g -> g.getCategoria() != null)
+                .collect(Collectors.groupingBy(
+                        g -> g.getCategoria().name(),
+                        Collectors.reducing(BigDecimal.ZERO, Gasto::getValor, BigDecimal::add)
+                ));
+    }
+
+    private BigDecimal somar(List<Gasto> gastos, Function<Gasto, BigDecimal> extrator) {
+        return gastos.stream()
+                .map(extrator)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     // comissao/adicional são opcionais no cadastro; tratamos null como 0
-    private double valorSeguro(Double valor) {
-        return valor != null ? valor : 0.0;
+    private BigDecimal somarRendaTotal(List<Salario> salarios) {
+        return salarios.stream()
+                .map(s -> valorSeguro(s.getValor())
+                        .add(valorSeguro(s.getComissao()))
+                        .add(valorSeguro(s.getAdicional())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal valorSeguro(BigDecimal valor) {
+        return valor != null ? valor : BigDecimal.ZERO;
+    }
+
+    private BigDecimal calcularPercentual(BigDecimal valorCategoria, BigDecimal totalSaidas) {
+        if (totalSaidas.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return valorCategoria
+                .divide(totalSaidas, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     // Datas nulas não ocorrem em produção (@NotNull), mas podem aparecer em testes

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -20,10 +21,10 @@ public class Salario {
 
     @NotNull
     @Positive
-    private Double valor;
+    private BigDecimal valor;
 
-    private Double comissao;
-    private Double adicional;
+    private BigDecimal comissao;
+    private BigDecimal adicional;
     private String descricao;
 
     @NotNull
@@ -36,14 +37,14 @@ public class Salario {
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 
-    public Double getComissao() { return comissao; }
-    public void setComissao(Double comissao) { this.comissao = comissao; }
+    public BigDecimal getComissao() { return comissao; }
+    public void setComissao(BigDecimal comissao) { this.comissao = comissao; }
 
-    public Double getAdicional() { return adicional; }
-    public void setAdicional(Double adicional) { this.adicional = adicional; }
+    public BigDecimal getAdicional() { return adicional; }
+    public void setAdicional(BigDecimal adicional) { this.adicional = adicional; }
 
-    public Double getValor() { return valor; }
-    public void setValor(Double valor) { this.valor = valor; }
+    public BigDecimal getValor() { return valor; }
+    public void setValor(BigDecimal valor) { this.valor = valor; }
 
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /** Gasto do usuário. As validações são aplicadas via @Valid no controller (400 automático). */
@@ -21,10 +22,11 @@ public class Gasto {
 
     @NotNull
     @Positive
-    private Double valor;
+    private BigDecimal valor;
 
-    @NotBlank
-    private String categoria;
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    private CategoriaGasto categoria;
 
     @NotNull
     private LocalDate data;
@@ -45,9 +47,9 @@ public class Gasto {
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
 
-    public Double getValor() { return valor; }
-    public void setValor(Double valor) { this.valor = valor; }
+    public BigDecimal getValor() { return valor; }
+    public void setValor(BigDecimal valor) { this.valor = valor; }
 
-    public String getCategoria() { return categoria; }
-    public void setCategoria(String categoria) { this.categoria = categoria; }
+    public CategoriaGasto getCategoria() { return categoria; }
+    public void setCategoria(CategoriaGasto categoria) { this.categoria = categoria; }
 }

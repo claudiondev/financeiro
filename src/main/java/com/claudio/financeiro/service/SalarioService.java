@@ -1,10 +1,14 @@
 package com.claudio.financeiro.service;
 
+import com.claudio.financeiro.dto.CriarSalarioRequest;
 import com.claudio.financeiro.dto.SalarioDTO;
 import com.claudio.financeiro.model.Salario;
+import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.SalarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -13,6 +17,21 @@ public class SalarioService {
 
     @Autowired
     private SalarioRepository salarioRepository;
+
+    public SalarioDTO criar(CriarSalarioRequest request, Usuario usuarioLogado) {
+        Salario salario = paraEntidade(request, usuarioLogado);
+        return toDTO(salvar(salario));
+    }
+
+    public SalarioDTO atualizar(Long id, CriarSalarioRequest request, Long usuarioId) {
+        Salario salario = buscarComOwnership(id, usuarioId);
+        salario.setValor(request.getValor());
+        salario.setComissao(request.getComissao());
+        salario.setAdicional(request.getAdicional());
+        salario.setDescricao(request.getDescricao());
+        salario.setData(request.getData());
+        return toDTO(salvar(salario));
+    }
 
     public Salario salvar(Salario salario) {
         return salarioRepository.save(salario);
@@ -24,15 +43,7 @@ public class SalarioService {
 
     // Verifica ownership antes de deletar, para evitar IDOR (usuário apagando salário de outro)
     public void deletar(Long id, Long usuarioId) {
-        Salario salario = salarioRepository.findById(id)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Salário não encontrado"));
-
-        if (!salario.getUsuario().getId().equals(usuarioId)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Acesso negado");
-        }
-
+        buscarComOwnership(id, usuarioId);
         salarioRepository.deleteById(id);
     }
 
@@ -46,5 +57,27 @@ public class SalarioService {
                 salario.getData(),
                 salario.getUsuario() != null ? salario.getUsuario().getId() : null
         );
+    }
+
+    private Salario paraEntidade(CriarSalarioRequest request, Usuario usuarioLogado) {
+        Salario salario = new Salario();
+        salario.setValor(request.getValor());
+        salario.setComissao(request.getComissao());
+        salario.setAdicional(request.getAdicional());
+        salario.setDescricao(request.getDescricao());
+        salario.setData(request.getData());
+        salario.setUsuario(usuarioLogado);
+        return salario;
+    }
+
+    private Salario buscarComOwnership(Long id, Long usuarioId) {
+        Salario salario = salarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Salário não encontrado"));
+
+        if (!salario.getUsuario().getId().equals(usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+        }
+
+        return salario;
     }
 }

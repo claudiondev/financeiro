@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -16,8 +17,8 @@ import java.util.List;
 public class RelatorioMensalDTO {
 
     private List<CategoriaDTO> categorias;
-    private Double totalEntradas;
-    private Double totalSaidas;
+    private BigDecimal totalEntradas;
+    private BigDecimal totalSaidas;
 
     @Data
     @NoArgsConstructor
@@ -25,12 +26,12 @@ public class RelatorioMensalDTO {
     public static class CategoriaDTO {
 
         private String nome;
-        private Double valor;
+        private BigDecimal valor;
 
         /** (valor / totalSaidas) * 100 */
-        private Double percentual;
+        private BigDecimal percentual;
 
         // Por ora igual ao valor do período; no futuro pode virar média histórica por mês
-        private Double media;
+        private BigDecimal media;
     }
 }
