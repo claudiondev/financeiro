@@ -30,6 +30,9 @@ public class OrcamentoService {
     @Autowired
     private GastoRepository gastoRepository;
 
+    @Autowired
+    private GastoFixoService gastoFixoService;
+
     // Upsert por categoria: usuário define o limite uma vez, atualizações seguintes só ajustam o valor
     public OrcamentoDTO salvarOuAtualizar(CriarOrcamentoRequest request, Usuario usuarioLogado) {
         Orcamento orcamento = orcamentoRepository
@@ -45,6 +48,11 @@ public class OrcamentoService {
     }
 
     public List<OrcamentoDTO> listarComConsumo(Long usuarioId, Integer mes, Integer ano) {
+        // Chamado uma vez aqui (não dentro do loop por categoria) — evita gerar redundante.
+        if (mes != null && ano != null) {
+            gastoFixoService.garantirGastosDoMesGerados(usuarioId, mes, ano);
+        }
+
         return orcamentoRepository.findByUsuarioId(usuarioId).stream()
                 .map(orcamento -> toDTOComConsumo(orcamento, mes, ano))
                 .collect(Collectors.toList());
@@ -62,9 +70,13 @@ public class OrcamentoService {
         orcamentoRepository.deleteById(id);
     }
 
-    /** Soma os gastos da categoria no período — reaproveitado pelo AssistenteService (Fase 6). */
+    /**
+     * Soma os gastos pagos da categoria no período — reaproveitado pelo AssistenteService (Fase 6).
+     * Conta fixa pendente não conta no consumo do orçamento ainda, só depois de paga.
+     */
     public BigDecimal calcularConsumoDaCategoria(Long usuarioId, CategoriaGasto categoria, Integer mes, Integer ano) {
         return gastoRepository.findByFiltros(usuarioId, categoria, mes, ano).stream()
+                .filter(Gasto::isPago)
                 .map(Gasto::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

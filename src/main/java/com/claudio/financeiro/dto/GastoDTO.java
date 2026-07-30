@@ -18,4 +18,8 @@ public class GastoDTO {
     private CategoriaGasto categoria;
     private LocalDate data;
     private Long usuarioId;
+    private boolean pago;
+
+    /** Id do GastoFixo de origem, se esse gasto foi gerado automaticamente; null se for avulso. */
+    private Long gastoFixoId;
 }

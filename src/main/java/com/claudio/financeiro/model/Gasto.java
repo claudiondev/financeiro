@@ -31,12 +31,32 @@ public class Gasto {
     @NotNull
     private LocalDate data;
 
+    // Gasto avulso nasce true (comportamento atual, inalterado); só nasce false
+    // quando gerado a partir de um GastoFixo (ver GastoFixoService).
+    private boolean pago = true;
+
+    @ManyToOne
+    @JoinColumn(name = "gasto_fixo_id")
+    private GastoFixo gastoFixo;
+
+    // Controla o lembrete por e-mail: só reenvia se essa data for diferente de hoje.
+    private LocalDate ultimoLembreteEnviadoEm;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+
+    public boolean isPago() { return pago; }
+    public void setPago(boolean pago) { this.pago = pago; }
+
+    public GastoFixo getGastoFixo() { return gastoFixo; }
+    public void setGastoFixo(GastoFixo gastoFixo) { this.gastoFixo = gastoFixo; }
+
+    public LocalDate getUltimoLembreteEnviadoEm() { return ultimoLembreteEnviadoEm; }
+    public void setUltimoLembreteEnviadoEm(LocalDate ultimoLembreteEnviadoEm) { this.ultimoLembreteEnviadoEm = ultimoLembreteEnviadoEm; }
 
     public LocalDate getData() { return data; }
     public void setData(LocalDate data) { this.data = data; }

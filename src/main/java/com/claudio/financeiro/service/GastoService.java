@@ -37,6 +37,9 @@ public class GastoService {
     @Autowired
     private SalarioRepository salarioRepository;
 
+    @Autowired
+    private GastoFixoService gastoFixoService;
+
     public GastoDTO criar(CriarGastoRequest request, Usuario usuarioLogado) {
         Gasto gasto = paraEntidade(request, usuarioLogado);
         return toDTO(salvar(gasto));
@@ -69,6 +72,12 @@ public class GastoService {
     }
 
     public List<GastoDTO> filtrarGastos(Long usuarioId, CategoriaGasto categoria, Integer mes, Integer ano) {
+        // Sem mês/ano não dá pra saber qual mês gerar — a listagem "todos os meses" não aciona a geração.
+        if (mes != null && ano != null) {
+            gastoFixoService.garantirGastosDoMesGerados(usuarioId, mes, ano);
+        }
+
+        // Mostra tudo, inclusive pendente — é aqui que o usuário vê e marca uma conta fixa como paga.
         return gastoRepository.findByFiltros(usuarioId, categoria, mes, ano)
                 .stream()
                 .map(this::toDTO)
@@ -76,7 +85,13 @@ public class GastoService {
     }
 
     public ResumoMensal calcularResumo(Long usuarioId) {
-        List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId);
+        LocalDate hoje = LocalDate.now();
+        gastoFixoService.garantirGastosDoMesGerados(usuarioId, hoje.getMonthValue(), hoje.getYear());
+
+        // Só conta o que já foi pago — conta fixa pendente não desconta do saldo ainda.
+        List<Gasto> gastos = gastoRepository.findByUsuarioId(usuarioId).stream()
+                .filter(Gasto::isPago)
+                .collect(Collectors.toList());
         List<Salario> salarios = salarioRepository.findByUsuarioId(usuarioId);
 
         BigDecimal totalGastos = somar(gastos, Gasto::getValor);
@@ -125,7 +140,13 @@ public class GastoService {
      * @param ano ano desejado, ou null para todos os anos
      */
     public RelatorioMensalDTO getRelatorio(Long usuarioId, Integer mes, Integer ano) {
-        List<Gasto> gastosFiltrados = gastoRepository.findByFiltros(usuarioId, null, mes, ano);
+        if (mes != null && ano != null) {
+            gastoFixoService.garantirGastosDoMesGerados(usuarioId, mes, ano);
+        }
+
+        List<Gasto> gastosFiltrados = gastoRepository.findByFiltros(usuarioId, null, mes, ano).stream()
+                .filter(Gasto::isPago)
+                .collect(Collectors.toList());
 
         // Salários filtrados em memória (evita adicionar mais uma query no repositório)
         List<Salario> salariosDoMes = salarioRepository.findByUsuarioId(usuarioId)
@@ -169,8 +190,12 @@ public class GastoService {
             YearMonth referencia = YearMonth.now().minusMonths(i);
             int mes = referencia.getMonthValue();
             int ano = referencia.getYear();
+            gastoFixoService.garantirGastosDoMesGerados(usuarioId, mes, ano);
 
-            BigDecimal totalSaidas = somar(gastoRepository.findByFiltros(usuarioId, null, mes, ano), Gasto::getValor);
+            List<Gasto> gastosDoMesPagos = gastoRepository.findByFiltros(usuarioId, null, mes, ano).stream()
+                    .filter(Gasto::isPago)
+                    .collect(Collectors.toList());
+            BigDecimal totalSaidas = somar(gastosDoMesPagos, Gasto::getValor);
             BigDecimal totalEntradas = somarRendaTotal(
                     todosSalarios.stream().filter(s -> salariosNoPeriodo(s, mes, ano)).collect(Collectors.toList())
             );
@@ -181,6 +206,14 @@ public class GastoService {
         return evolucao;
     }
 
+    // Marca como pago um Gasto gerado a partir de um GastoFixo — é aqui que a conta
+    // pendente passa a contar no saldo do mês.
+    public GastoDTO marcarComoPago(Long id, Long usuarioId) {
+        Gasto gasto = buscarComOwnership(id, usuarioId);
+        gasto.setPago(true);
+        return toDTO(salvar(gasto));
+    }
+
     public GastoDTO toDTO(Gasto gasto) {
         GastoDTO dto = new GastoDTO();
         dto.setId(gasto.getId());
@@ -189,6 +222,8 @@ public class GastoService {
         dto.setCategoria(gasto.getCategoria());
         dto.setData(gasto.getData());
         dto.setUsuarioId(gasto.getUsuario().getId());
+        dto.setPago(gasto.isPago());
+        dto.setGastoFixoId(gasto.getGastoFixo() != null ? gasto.getGastoFixo().getId() : null);
         return dto;
     }
 

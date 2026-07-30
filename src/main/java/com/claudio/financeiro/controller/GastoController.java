@@ -48,6 +48,14 @@ public class GastoController {
         gastoService.deletar(id, usuarioLogado.getId());
     }
 
+    // Endpoint específico em vez de reaproveitar o PUT genérico — só faz sentido mudar
+    // esse campo isoladamente (confirmação de pagamento de conta fixa).
+    @PatchMapping("/{id}/pagar")
+    public GastoDTO marcarComoPago(@PathVariable Long id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return gastoService.marcarComoPago(id, usuarioLogado.getId());
+    }
+
     @GetMapping("/resumo")
     public ResumoMensal resumo(Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();

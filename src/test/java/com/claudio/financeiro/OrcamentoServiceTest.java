@@ -8,6 +8,7 @@ import com.claudio.financeiro.model.Orcamento;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
+import com.claudio.financeiro.service.GastoFixoService;
 import com.claudio.financeiro.service.OrcamentoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,9 @@ class OrcamentoServiceTest {
 
     @Mock
     private GastoRepository gastoRepository;
+
+    @Mock
+    private GastoFixoService gastoFixoService;
 
     @InjectMocks
     private OrcamentoService orcamentoService;
@@ -114,6 +118,23 @@ class OrcamentoServiceTest {
         List<OrcamentoDTO> resultado = orcamentoService.listarComConsumo(1L, 7, 2026);
 
         assertEquals("ATENCAO", resultado.get(0).getStatus());
+    }
+
+    @Test
+    void consumoNaoDeveContarGastoFixoAindaNaoPago() {
+        Usuario usuario = usuarioComId(1L);
+        Orcamento orcamento = orcamentoComLimite(usuario, CategoriaGasto.MORADIA, 1000.0);
+        Gasto pago = gastoComValor(500.0);
+        Gasto pendente = gastoComValor(300.0);
+        pendente.setPago(false);
+        when(orcamentoRepository.findByUsuarioId(1L)).thenReturn(List.of(orcamento));
+        when(gastoRepository.findByFiltros(1L, CategoriaGasto.MORADIA, 7, 2026))
+                .thenReturn(List.of(pago, pendente));
+
+        List<OrcamentoDTO> resultado = orcamentoService.listarComConsumo(1L, 7, 2026);
+
+        // Só os 500 pagos contam pro consumo — os 300 da conta fixa pendente ficam de fora
+        assertEquals(0, BigDecimal.valueOf(500.0).compareTo(resultado.get(0).getValorConsumido()));
     }
 
     @Test

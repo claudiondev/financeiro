@@ -10,6 +10,7 @@ import com.claudio.financeiro.model.Salario;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.SalarioRepository;
+import com.claudio.financeiro.service.GastoFixoService;
 import com.claudio.financeiro.service.GastoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,9 @@ class GastoServiceTest {
 
     @Mock
     private SalarioRepository salarioRepository;
+
+    @Mock
+    private GastoFixoService gastoFixoService;
 
     @InjectMocks
     private GastoService gastoService;
@@ -198,6 +202,21 @@ class GastoServiceTest {
 
         assertValorIgual(2000.0, resultado.getSaldo());
         assertValorIgual(0.0, resultado.getTotalGasto());
+    }
+
+    @Test
+    void calcularResumoDeveIgnorarGastoFixoAindaNaoPago() {
+        Gasto pago = gastoSimples(600.0);
+        Gasto pendente = gastoSimples(400.0);
+        pendente.setPago(false);
+        when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(pago, pendente));
+        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(salarioSimples(1000.0)));
+
+        ResumoMensal resultado = gastoService.calcularResumo(1L);
+
+        // Só os 600 pagos entram no saldo — os 400 pendentes ficam de fora até serem confirmados
+        assertValorIgual(400.0, resultado.getSaldo());
+        assertValorIgual(600.0, resultado.getTotalGasto());
     }
 
     @Test

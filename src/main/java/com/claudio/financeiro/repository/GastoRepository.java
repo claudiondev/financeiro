@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
@@ -22,4 +24,10 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
             @Param("mes") Integer mes,
             @Param("ano") Integer ano
     );
+
+    // Usados pela geração automática de gastos fixos (GastoFixoService) — checam se o
+    // gasto do mês já existe antes de gerar de novo (idempotência).
+    boolean existsByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
+
+    Optional<Gasto> findByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
 }
