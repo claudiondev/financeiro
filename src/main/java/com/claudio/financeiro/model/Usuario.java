@@ -25,6 +25,10 @@ public class Usuario implements UserDetails {
     @NotBlank @Email
     private String email;
 
+    // Opcional — contas antigas nascem sem nome; o frontend usa a parte antes do @ do e-mail como fallback.
+    @Size(max = 100)
+    private String nome;
+
     @NotBlank @Size(min = 6)
     @JsonProperty(access = WRITE_ONLY)
     private String senha;
@@ -47,6 +51,14 @@ public class Usuario implements UserDetails {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
     public String getSenha() {
