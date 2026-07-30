@@ -1,5 +1,7 @@
 package com.claudio.financeiro.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +22,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> tratarErrosDeValidacao(MethodArgumentNotValidException ex) {
@@ -43,9 +47,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(corpoDeErro(status, ex.getReason(), null));
     }
 
-    // Rede de segurança para qualquer exceção não mapeada — nunca deixa o erro cru vazar pro cliente
+    // Rede de segurança para qualquer exceção não mapeada — nunca deixa o erro cru vazar pro cliente.
+    // Loga a exceção real: sem isso, um 500 genérico não deixa nenhum rastro pra diagnosticar depois.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> tratarErroInesperado(Exception ex) {
+        log.error("Erro inesperado não mapeado", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(corpoDeErro(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno no servidor", null));
     }
