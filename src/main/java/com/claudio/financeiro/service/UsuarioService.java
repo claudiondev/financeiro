@@ -4,7 +4,6 @@ import com.claudio.financeiro.dto.AtualizarPerfilRequest;
 import com.claudio.financeiro.dto.UsuarioDTO;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,8 +14,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class UsuarioService implements UserDetailsService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public UsuarioService(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {

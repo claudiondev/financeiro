@@ -5,7 +5,6 @@ import com.claudio.financeiro.dto.OrcamentoDTO;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.OrcamentoService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +15,11 @@ import java.util.List;
 @RequestMapping("/orcamentos")
 public class OrcamentoController {
 
-    @Autowired
-    private OrcamentoService orcamentoService;
+    private final OrcamentoService orcamentoService;
+
+    public OrcamentoController(OrcamentoService orcamentoService) {
+        this.orcamentoService = orcamentoService;
+    }
 
     @PostMapping
     public OrcamentoDTO salvar(@Valid @RequestBody CriarOrcamentoRequest request, Authentication authentication) {

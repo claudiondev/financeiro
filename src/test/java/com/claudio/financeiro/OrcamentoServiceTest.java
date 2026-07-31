@@ -5,6 +5,7 @@ import com.claudio.financeiro.dto.OrcamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Orcamento;
+import com.claudio.financeiro.model.StatusOrcamento;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
@@ -91,7 +92,7 @@ class OrcamentoServiceTest {
 
         assertEquals(1, resultado.size());
         assertEquals(0, BigDecimal.valueOf(50.0).compareTo(resultado.get(0).getPercentualConsumido()));
-        assertEquals("DENTRO_DO_LIMITE", resultado.get(0).getStatus());
+        assertEquals(StatusOrcamento.DENTRO_DO_LIMITE, resultado.get(0).getStatus());
     }
 
     @Test
@@ -104,7 +105,7 @@ class OrcamentoServiceTest {
 
         List<OrcamentoDTO> resultado = orcamentoService.listarComConsumo(1L, 7, 2026);
 
-        assertEquals("ESTOURADO", resultado.get(0).getStatus());
+        assertEquals(StatusOrcamento.ESTOURADO, resultado.get(0).getStatus());
     }
 
     @Test
@@ -117,7 +118,7 @@ class OrcamentoServiceTest {
 
         List<OrcamentoDTO> resultado = orcamentoService.listarComConsumo(1L, 7, 2026);
 
-        assertEquals("ATENCAO", resultado.get(0).getStatus());
+        assertEquals(StatusOrcamento.ATENCAO, resultado.get(0).getStatus());
     }
 
     @Test

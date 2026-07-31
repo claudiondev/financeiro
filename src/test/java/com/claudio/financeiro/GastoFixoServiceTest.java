@@ -5,6 +5,7 @@ import com.claudio.financeiro.dto.GastoFixoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.GastoFixo;
+import com.claudio.financeiro.model.StatusGastoFixo;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoFixoRepository;
 import com.claudio.financeiro.repository.GastoRepository;
@@ -218,25 +219,25 @@ class GastoFixoServiceTest {
     @Test
     void deveRetornarStatusAtrasadoQuandoVencimentoJaPassouENaoPago() {
         List<GastoFixoDTO> resultado = listarComStatusMockandoGastoDoMes(false, LocalDate.now().minusDays(2));
-        assertEquals("ATRASADO", resultado.get(0).getStatusMesAtual());
+        assertEquals(StatusGastoFixo.ATRASADO, resultado.get(0).getStatusMesAtual());
     }
 
     @Test
     void deveRetornarStatusVencendoQuandoFaltamAteTresDias() {
         List<GastoFixoDTO> resultado = listarComStatusMockandoGastoDoMes(false, LocalDate.now().plusDays(2));
-        assertEquals("VENCENDO", resultado.get(0).getStatusMesAtual());
+        assertEquals(StatusGastoFixo.VENCENDO, resultado.get(0).getStatusMesAtual());
     }
 
     @Test
     void deveRetornarStatusPendenteQuandoFaltamMaisDeTresDias() {
         List<GastoFixoDTO> resultado = listarComStatusMockandoGastoDoMes(false, LocalDate.now().plusDays(10));
-        assertEquals("PENDENTE", resultado.get(0).getStatusMesAtual());
+        assertEquals(StatusGastoFixo.PENDENTE, resultado.get(0).getStatusMesAtual());
     }
 
     @Test
     void deveRetornarStatusPagoQuandoGastoDoMesJaFoiPago() {
         List<GastoFixoDTO> resultado = listarComStatusMockandoGastoDoMes(true, LocalDate.now().minusDays(2));
-        assertEquals("PAGO", resultado.get(0).getStatusMesAtual());
+        assertEquals(StatusGastoFixo.PAGO, resultado.get(0).getStatusMesAtual());
     }
 
     @Test

@@ -3,13 +3,15 @@ package com.claudio.financeiro.controller;
 import com.claudio.financeiro.dto.CriarGastoRequest;
 import com.claudio.financeiro.dto.EvolucaoMensalDTO;
 import com.claudio.financeiro.dto.GastoDTO;
+import com.claudio.financeiro.dto.ParcelamentoDTO;
 import com.claudio.financeiro.dto.RelatorioMensalDTO;
 import com.claudio.financeiro.dto.ResumoMensal;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Usuario;
+import com.claudio.financeiro.service.EvolucaoService;
 import com.claudio.financeiro.service.GastoService;
+import com.claudio.financeiro.service.RelatorioService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +23,15 @@ import java.util.Map;
 @RequestMapping("/gastos")
 public class GastoController {
 
-    @Autowired
-    private GastoService gastoService;
+    private final GastoService gastoService;
+    private final RelatorioService relatorioService;
+    private final EvolucaoService evolucaoService;
+
+    public GastoController(GastoService gastoService, RelatorioService relatorioService, EvolucaoService evolucaoService) {
+        this.gastoService = gastoService;
+        this.relatorioService = relatorioService;
+        this.evolucaoService = evolucaoService;
+    }
 
     @PostMapping
     public GastoDTO criar(@Valid @RequestBody CriarGastoRequest request, Authentication authentication) {
@@ -48,8 +57,6 @@ public class GastoController {
         gastoService.deletar(id, usuarioLogado.getId());
     }
 
-    // Endpoint específico em vez de reaproveitar o PUT genérico — só faz sentido mudar
-    // esse campo isoladamente (confirmação de pagamento de conta fixa).
     @PatchMapping("/{id}/pagar")
     public GastoDTO marcarComoPago(@PathVariable Long id, Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
@@ -59,14 +66,13 @@ public class GastoController {
     @GetMapping("/resumo")
     public ResumoMensal resumo(Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        return gastoService.calcularResumo(usuarioLogado.getId());
+        return relatorioService.calcularResumo(usuarioLogado.getId());
     }
 
-    // Mantido para compatibilidade com outros consumidores; a página de Relatórios usa /relatorio
     @GetMapping("/categorias")
     public Map<String, BigDecimal> resumoCategoria(Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        return gastoService.resumoPorCategoria(usuarioLogado.getId());
+        return relatorioService.resumoPorCategoria(usuarioLogado.getId());
     }
 
     @GetMapping("/filtrar")
@@ -87,7 +93,13 @@ public class GastoController {
             @RequestParam(required = false) Integer ano
     ) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        return gastoService.getRelatorio(usuarioLogado.getId(), mes, ano);
+        return relatorioService.getRelatorio(usuarioLogado.getId(), mes, ano);
+    }
+
+    @GetMapping("/parcelamentos")
+    public List<ParcelamentoDTO> parcelamentos(Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return gastoService.listarParcelamentosEmAberto(usuarioLogado.getId());
     }
 
     @GetMapping("/evolucao")
@@ -96,6 +108,6 @@ public class GastoController {
             @RequestParam(required = false, defaultValue = "6") Integer meses
     ) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        return gastoService.getEvolucaoMensal(usuarioLogado.getId(), meses);
+        return evolucaoService.getEvolucaoMensal(usuarioLogado.getId(), meses);
     }
 }

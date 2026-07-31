@@ -1,6 +1,7 @@
 package com.claudio.financeiro.dto;
 
 import com.claudio.financeiro.model.CategoriaGasto;
+import com.claudio.financeiro.model.StatusGastoFixo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,8 +23,7 @@ public class GastoFixoDTO {
     private LocalDate dataInicio;
     private boolean ativo;
 
-    /** PAGO, VENCENDO (<=3 dias), ATRASADO ou PENDENTE (ver GastoFixoService.calcularStatus). */
-    private String statusMesAtual;
+    private StatusGastoFixo statusMesAtual;
     private LocalDate dataVencimentoMesAtual;
 
     /** Id do Gasto gerado esse mes (para o botão "marcar como pago" chamar PATCH /gastos/{id}/pagar). Null se ainda não foi gerado. */

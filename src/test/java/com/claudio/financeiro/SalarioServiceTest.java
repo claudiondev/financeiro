@@ -32,17 +32,6 @@ class SalarioServiceTest {
     private SalarioService salarioService;
 
     @Test
-    void deveSalvarSalarioERetornarORegistro() {
-        Salario salario = salarioComUsuario(1L, 3000.0);
-        when(salarioRepository.save(salario)).thenReturn(salario);
-
-        Salario resultado = salarioService.salvar(salario);
-
-        assertEquals(salario, resultado);
-        verify(salarioRepository).save(salario);
-    }
-
-    @Test
     void deveCriarSalarioAPartirDoRequest() {
         Usuario usuario = new Usuario();
         usuario.setId(1L);
@@ -112,7 +101,7 @@ class SalarioServiceTest {
         Salario s2 = salarioComUsuario(1L, 500.0);
         when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(s1, s2));
 
-        List<Salario> resultado = salarioService.listarPorUsuario(1L);
+        List<SalarioDTO> resultado = salarioService.listarPorUsuario(1L);
 
         assertEquals(2, resultado.size());
         assertValorIgual(3000.0, resultado.get(0).getValor());

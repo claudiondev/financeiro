@@ -5,7 +5,6 @@ import com.claudio.financeiro.dto.SalarioDTO;
 import com.claudio.financeiro.model.Salario;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.SalarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,8 +14,11 @@ import java.util.List;
 @Service
 public class SalarioService {
 
-    @Autowired
-    private SalarioRepository salarioRepository;
+    private final SalarioRepository salarioRepository;
+
+    public SalarioService(SalarioRepository salarioRepository) {
+        this.salarioRepository = salarioRepository;
+    }
 
     public SalarioDTO criar(CriarSalarioRequest request, Usuario usuarioLogado) {
         Salario salario = paraEntidade(request, usuarioLogado);
@@ -33,12 +35,11 @@ public class SalarioService {
         return toDTO(salvar(salario));
     }
 
-    public Salario salvar(Salario salario) {
-        return salarioRepository.save(salario);
-    }
-
-    public List<Salario> listarPorUsuario(Long usuarioId) {
-        return salarioRepository.findByUsuarioId(usuarioId);
+    public List<SalarioDTO> listarPorUsuario(Long usuarioId) {
+        return salarioRepository.findByUsuarioId(usuarioId)
+                .stream()
+                .map(this::toDTO)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // Verifica ownership antes de deletar, para evitar IDOR (usuário apagando salário de outro)
@@ -47,7 +48,11 @@ public class SalarioService {
         salarioRepository.deleteById(id);
     }
 
-    public SalarioDTO toDTO(Salario salario) {
+    private Salario salvar(Salario salario) {
+        return salarioRepository.save(salario);
+    }
+
+    private SalarioDTO toDTO(Salario salario) {
         return new SalarioDTO(
                 salario.getId(),
                 salario.getValor(),

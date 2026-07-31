@@ -42,6 +42,18 @@ public class Gasto {
     // Controla o lembrete por e-mail: só reenvia se essa data for diferente de hoje.
     private LocalDate ultimoLembreteEnviadoEm;
 
+    // Nulo em gastos antigos (criados antes desse campo existir) — a UI mostra "—".
+    @Enumerated(EnumType.STRING)
+    private FormaPagamento formaPagamento;
+
+    // Agrupa as N parcelas de uma mesma compra parcelada; null quando não é parcelado.
+    // UUID em vez de entidade própria: as parcelas nascem todas de uma vez, não há
+    // "molde" que segue gerando (diferente de GastoFixo), então não compensa uma tabela.
+    private String grupoParcelamento;
+
+    private Integer numeroParcela;
+    private Integer totalParcelas;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
@@ -72,4 +84,16 @@ public class Gasto {
 
     public CategoriaGasto getCategoria() { return categoria; }
     public void setCategoria(CategoriaGasto categoria) { this.categoria = categoria; }
+
+    public FormaPagamento getFormaPagamento() { return formaPagamento; }
+    public void setFormaPagamento(FormaPagamento formaPagamento) { this.formaPagamento = formaPagamento; }
+
+    public String getGrupoParcelamento() { return grupoParcelamento; }
+    public void setGrupoParcelamento(String grupoParcelamento) { this.grupoParcelamento = grupoParcelamento; }
+
+    public Integer getNumeroParcela() { return numeroParcela; }
+    public void setNumeroParcela(Integer numeroParcela) { this.numeroParcela = numeroParcela; }
+
+    public Integer getTotalParcelas() { return totalParcelas; }
+    public void setTotalParcelas(Integer totalParcelas) { this.totalParcelas = totalParcelas; }
 }

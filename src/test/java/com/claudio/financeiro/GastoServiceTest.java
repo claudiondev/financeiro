@@ -1,19 +1,18 @@
 package com.claudio.financeiro;
 
 import com.claudio.financeiro.dto.CriarGastoRequest;
-import com.claudio.financeiro.dto.EvolucaoMensalDTO;
 import com.claudio.financeiro.dto.GastoDTO;
-import com.claudio.financeiro.dto.ResumoMensal;
+import com.claudio.financeiro.dto.ParcelamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
+import com.claudio.financeiro.model.FormaPagamento;
 import com.claudio.financeiro.model.Gasto;
-import com.claudio.financeiro.model.Salario;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
-import com.claudio.financeiro.repository.SalarioRepository;
 import com.claudio.financeiro.service.GastoFixoService;
 import com.claudio.financeiro.service.GastoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,30 +35,16 @@ class GastoServiceTest {
     private GastoRepository gastoRepository;
 
     @Mock
-    private SalarioRepository salarioRepository;
-
-    @Mock
     private GastoFixoService gastoFixoService;
 
     @InjectMocks
     private GastoService gastoService;
 
     @Test
-    void deveSalvarGastoERetornarORegistro() {
-        Gasto gasto = gastoComUsuario(1L);
-        when(gastoRepository.save(gasto)).thenReturn(gasto);
-
-        Gasto resultado = gastoService.salvar(gasto);
-
-        assertEquals(gasto, resultado);
-        verify(gastoRepository).save(gasto);
-    }
-
-    @Test
     void deveCriarGastoAPartirDoRequest() {
         Usuario usuario = new Usuario();
         usuario.setId(1L);
-        CriarGastoRequest request = new CriarGastoRequest(
+        CriarGastoRequest request = requestSimples(
                 "Mercado", BigDecimal.valueOf(250.0), CategoriaGasto.ALIMENTACAO, LocalDate.of(2026, 7, 10)
         );
         when(gastoRepository.save(any(Gasto.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
@@ -78,7 +63,7 @@ class GastoServiceTest {
         when(gastoRepository.findById(10L)).thenReturn(Optional.of(gastoExistente));
         when(gastoRepository.save(any(Gasto.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
 
-        CriarGastoRequest request = new CriarGastoRequest(
+        CriarGastoRequest request = requestSimples(
                 "Mercado atualizado", BigDecimal.valueOf(180.0), CategoriaGasto.ALIMENTACAO, LocalDate.of(2026, 7, 15)
         );
 
@@ -94,7 +79,7 @@ class GastoServiceTest {
     void deveLancarForbiddenAoAtualizarGastoDeOutroUsuario() {
         Gasto gasto = gastoComUsuario(1L);
         when(gastoRepository.findById(10L)).thenReturn(Optional.of(gasto));
-        CriarGastoRequest request = new CriarGastoRequest("X", BigDecimal.TEN, CategoriaGasto.OUTROS, LocalDate.now());
+        CriarGastoRequest request = requestSimples("X", BigDecimal.TEN, CategoriaGasto.OUTROS, LocalDate.now());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -108,7 +93,7 @@ class GastoServiceTest {
     @Test
     void deveLancarNotFoundAoAtualizarGastoInexistente() {
         when(gastoRepository.findById(99L)).thenReturn(Optional.empty());
-        CriarGastoRequest request = new CriarGastoRequest("X", BigDecimal.TEN, CategoriaGasto.OUTROS, LocalDate.now());
+        CriarGastoRequest request = requestSimples("X", BigDecimal.TEN, CategoriaGasto.OUTROS, LocalDate.now());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -172,96 +157,140 @@ class GastoServiceTest {
     }
 
     @Test
-    void deveCalcularResumoComSaldoPositivo() {
-        when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(gastoSimples(600.0)));
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(salarioSimples(1000.0)));
+    void deveCriarUmaParcelaPorMesEmCompraParcelada() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        CriarGastoRequest request = requestSimples(
+                "Notebook", BigDecimal.valueOf(500.0), CategoriaGasto.OUTROS, LocalDate.of(2026, 7, 10)
+        );
+        request.setFormaPagamento(FormaPagamento.CARTAO_CREDITO);
+        request.setTotalParcelas(5);
+        when(gastoRepository.save(any(Gasto.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ResumoMensal resultado = gastoService.calcularResumo(1L);
+        gastoService.criar(request, usuario);
 
-        assertValorIgual(400.0, resultado.getSaldo());
-        assertEquals("Parabéns! Você economizou esse mês!", resultado.getMensagem());
+        ArgumentCaptor<Gasto> captor = ArgumentCaptor.forClass(Gasto.class);
+        verify(gastoRepository, times(5)).save(captor.capture());
+        List<Gasto> parcelas = captor.getAllValues();
+
+        assertEquals(LocalDate.of(2026, 7, 10), parcelas.get(0).getData());
+        assertEquals(LocalDate.of(2026, 11, 10), parcelas.get(4).getData());
+        assertEquals(1, parcelas.get(0).getNumeroParcela());
+        assertEquals(5, parcelas.get(0).getTotalParcelas());
+        // Todas as parcelas compartilham o mesmo grupo, e nascem pagas (débito automático na fatura)
+        assertEquals(parcelas.get(0).getGrupoParcelamento(), parcelas.get(4).getGrupoParcelamento());
+        assertTrue(parcelas.get(0).isPago());
     }
 
     @Test
-    void deveCalcularResumoComSaldoNegativo() {
-        when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(gastoSimples(1000.0)));
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(salarioSimples(500.0)));
+    void somaDasParcelasDeveBaterExatamenteComOValorDaCompra() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        CriarGastoRequest request = requestSimples(
+                "TV", BigDecimal.valueOf(500.0), CategoriaGasto.OUTROS, LocalDate.of(2026, 7, 10)
+        );
+        request.setFormaPagamento(FormaPagamento.CARTAO_CREDITO);
+        request.setTotalParcelas(3);
+        when(gastoRepository.save(any(Gasto.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ResumoMensal resultado = gastoService.calcularResumo(1L);
+        gastoService.criar(request, usuario);
 
-        assertValorIgual(-500.0, resultado.getSaldo());
-        assertEquals("Atenção! Seus gastos ultrapassaram o salário!", resultado.getMensagem());
+        ArgumentCaptor<Gasto> captor = ArgumentCaptor.forClass(Gasto.class);
+        verify(gastoRepository, times(3)).save(captor.capture());
+
+        // 500/3 não é exato: 166,67 + 166,67 + 166,66 — a última absorve a diferença
+        assertValorIgual(166.67, captor.getAllValues().get(0).getValor());
+        assertValorIgual(166.66, captor.getAllValues().get(2).getValor());
+        BigDecimal soma = captor.getAllValues().stream()
+                .map(Gasto::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertValorIgual(500.0, soma);
     }
 
     @Test
-    void deveCalcularResumoSemGastosNoMes() {
-        when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of());
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(salarioSimples(2000.0)));
+    void deveRejeitarParcelamentoQuandoFormaDePagamentoNaoEhCredito() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        CriarGastoRequest request = requestSimples(
+                "Mercado", BigDecimal.valueOf(300.0), CategoriaGasto.ALIMENTACAO, LocalDate.now()
+        );
+        request.setFormaPagamento(FormaPagamento.PIX);
+        request.setTotalParcelas(3);
 
-        ResumoMensal resultado = gastoService.calcularResumo(1L);
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> gastoService.criar(request, usuario)
+        );
 
-        assertValorIgual(2000.0, resultado.getSaldo());
-        assertValorIgual(0.0, resultado.getTotalGasto());
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(gastoRepository, never()).save(any());
     }
 
     @Test
-    void calcularResumoDeveIgnorarGastoFixoAindaNaoPago() {
-        Gasto pago = gastoSimples(600.0);
-        Gasto pendente = gastoSimples(400.0);
-        pendente.setPago(false);
-        when(gastoRepository.findByUsuarioId(1L)).thenReturn(List.of(pago, pendente));
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(salarioSimples(1000.0)));
+    void deveCriarGastoUnicoQuandoTotalParcelasEhUm() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        CriarGastoRequest request = requestSimples(
+                "Uber", BigDecimal.valueOf(32.5), CategoriaGasto.TRANSPORTE, LocalDate.now()
+        );
+        request.setFormaPagamento(FormaPagamento.PIX);
+        request.setTotalParcelas(1);
+        when(gastoRepository.save(any(Gasto.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ResumoMensal resultado = gastoService.calcularResumo(1L);
+        GastoDTO resultado = gastoService.criar(request, usuario);
 
-        // Só os 600 pagos entram no saldo — os 400 pendentes ficam de fora até serem confirmados
-        assertValorIgual(400.0, resultado.getSaldo());
-        assertValorIgual(600.0, resultado.getTotalGasto());
+        verify(gastoRepository, times(1)).save(any());
+        assertNull(resultado.getNumeroParcela());
     }
 
     @Test
-    void deveRetornarEvolucaoDosUltimosNMeses() {
+    void deveListarParcelamentoEmAbertoComValorRestante() {
         YearMonth mesAtual = YearMonth.now();
-        YearMonth mesAnterior = mesAtual.minusMonths(1);
+        // 3 parcelas: uma já venceu (mês passado), duas ainda a vencer (este mês e o próximo)
+        List<Gasto> parcelas = List.of(
+                parcelaDeCompra("grupo-1", 1, 3, 100.0, mesAtual.minusMonths(1).atDay(10)),
+                parcelaDeCompra("grupo-1", 2, 3, 100.0, mesAtual.atDay(10)),
+                parcelaDeCompra("grupo-1", 3, 3, 100.0, mesAtual.plusMonths(1).atDay(10))
+        );
+        when(gastoRepository.findByUsuarioIdAndGrupoParcelamentoIsNotNull(1L)).thenReturn(parcelas);
 
-        when(gastoRepository.findByFiltros(1L, null, mesAnterior.getMonthValue(), mesAnterior.getYear()))
-                .thenReturn(List.of(gastoSimples(100.0)));
-        when(gastoRepository.findByFiltros(1L, null, mesAtual.getMonthValue(), mesAtual.getYear()))
-                .thenReturn(List.of(gastoSimples(50.0)));
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of());
+        List<ParcelamentoDTO> resultado = gastoService.listarParcelamentosEmAberto(1L);
 
-        List<EvolucaoMensalDTO> resultado = gastoService.getEvolucaoMensal(1L, 2);
-
-        assertEquals(2, resultado.size());
-        assertValorIgual(100.0, resultado.get(0).getTotalSaidas());
-        assertValorIgual(50.0, resultado.get(1).getTotalSaidas());
+        assertEquals(1, resultado.size());
+        assertValorIgual(300.0, resultado.get(0).getValorTotal());
+        assertValorIgual(200.0, resultado.get(0).getValorRestante());
+        assertEquals(1, resultado.get(0).getParcelasPagas());
+        assertEquals(mesAtual.plusMonths(1).atDay(10), resultado.get(0).getUltimaParcela());
     }
 
     @Test
-    void deveOrdenarEvolucaoCronologicamente() {
-        when(gastoRepository.findByFiltros(eq(1L), isNull(), anyInt(), anyInt())).thenReturn(List.of());
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of());
+    void naoDeveListarParcelamentoJaQuitado() {
+        YearMonth mesAtual = YearMonth.now();
+        List<Gasto> parcelas = List.of(
+                parcelaDeCompra("grupo-1", 1, 2, 100.0, mesAtual.minusMonths(2).atDay(10)),
+                parcelaDeCompra("grupo-1", 2, 2, 100.0, mesAtual.minusMonths(1).atDay(10))
+        );
+        when(gastoRepository.findByUsuarioIdAndGrupoParcelamentoIsNotNull(1L)).thenReturn(parcelas);
 
-        List<EvolucaoMensalDTO> resultado = gastoService.getEvolucaoMensal(1L, 3);
+        List<ParcelamentoDTO> resultado = gastoService.listarParcelamentosEmAberto(1L);
 
-        YearMonth esperado = YearMonth.now().minusMonths(2);
-        for (EvolucaoMensalDTO ponto : resultado) {
-            assertEquals(esperado.getMonthValue(), ponto.getMes());
-            assertEquals(esperado.getYear(), ponto.getAno());
-            esperado = esperado.plusMonths(1);
-        }
+        assertTrue(resultado.isEmpty());
     }
 
-    @Test
-    void deveRetornarZeroParaMesesSemRegistros() {
-        when(gastoRepository.findByFiltros(eq(1L), isNull(), anyInt(), anyInt())).thenReturn(List.of());
-        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of());
+    private CriarGastoRequest requestSimples(String descricao, BigDecimal valor, CategoriaGasto categoria, LocalDate data) {
+        return new CriarGastoRequest(descricao, valor, categoria, data, null, null);
+    }
 
-        List<EvolucaoMensalDTO> resultado = gastoService.getEvolucaoMensal(1L, 1);
-
-        assertValorIgual(0.0, resultado.get(0).getTotalSaidas());
-        assertValorIgual(0.0, resultado.get(0).getTotalEntradas());
-        assertValorIgual(0.0, resultado.get(0).getSaldo());
+    private Gasto parcelaDeCompra(String grupo, int numero, int total, double valor, LocalDate data) {
+        Gasto gasto = new Gasto();
+        gasto.setDescricao("Notebook");
+        gasto.setCategoria(CategoriaGasto.OUTROS);
+        gasto.setValor(BigDecimal.valueOf(valor));
+        gasto.setData(data);
+        gasto.setGrupoParcelamento(grupo);
+        gasto.setNumeroParcela(numero);
+        gasto.setTotalParcelas(total);
+        return gasto;
     }
 
     private Gasto gastoComUsuario(Long usuarioId) {
@@ -287,14 +316,6 @@ class GastoServiceTest {
         Gasto gasto = new Gasto();
         gasto.setValor(BigDecimal.valueOf(valor));
         return gasto;
-    }
-
-    private Salario salarioSimples(double valor) {
-        Salario salario = new Salario();
-        salario.setValor(BigDecimal.valueOf(valor));
-        salario.setComissao(BigDecimal.ZERO);
-        salario.setAdicional(BigDecimal.ZERO);
-        return salario;
     }
 
     // BigDecimal.equals() é sensível à escala ("400.0" != "400.00") — compareTo é a forma

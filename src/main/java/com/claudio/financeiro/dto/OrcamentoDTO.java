@@ -1,6 +1,7 @@
 package com.claudio.financeiro.dto;
 
 import com.claudio.financeiro.model.CategoriaGasto;
+import com.claudio.financeiro.model.StatusOrcamento;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,5 @@ public class OrcamentoDTO {
     /** (valorConsumido / limiteMensal) * 100 */
     private BigDecimal percentualConsumido;
 
-    /** DENTRO_DO_LIMITE, ATENCAO (>=80%) ou ESTOURADO (>=100%) */
-    private String status;
+    private StatusOrcamento status;
 }

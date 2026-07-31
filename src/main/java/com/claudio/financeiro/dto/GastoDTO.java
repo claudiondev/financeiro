@@ -1,6 +1,7 @@
 package com.claudio.financeiro.dto;
 
 import com.claudio.financeiro.model.CategoriaGasto;
+import com.claudio.financeiro.model.FormaPagamento;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,4 +23,10 @@ public class GastoDTO {
 
     /** Id do GastoFixo de origem, se esse gasto foi gerado automaticamente; null se for avulso. */
     private Long gastoFixoId;
+
+    private FormaPagamento formaPagamento;
+
+    /** Preenchidos só em gasto parcelado — permitem exibir "2/5" na listagem. */
+    private Integer numeroParcela;
+    private Integer totalParcelas;
 }

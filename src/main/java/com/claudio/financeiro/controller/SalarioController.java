@@ -5,19 +5,20 @@ import com.claudio.financeiro.dto.SalarioDTO;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.SalarioService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/salario")
 public class SalarioController {
 
-    @Autowired
-    private SalarioService salarioService;
+    private final SalarioService salarioService;
+
+    public SalarioController(SalarioService salarioService) {
+        this.salarioService = salarioService;
+    }
 
     @PostMapping
     public SalarioDTO criar(@Valid @RequestBody CriarSalarioRequest request, Authentication authentication) {
@@ -28,10 +29,7 @@ public class SalarioController {
     @GetMapping
     public List<SalarioDTO> listar(Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
-        return salarioService.listarPorUsuario(usuarioLogado.getId())
-                .stream()
-                .map(salarioService::toDTO)
-                .collect(Collectors.toList());
+        return salarioService.listarPorUsuario(usuarioLogado.getId());
     }
 
     @PutMapping("/{id}")

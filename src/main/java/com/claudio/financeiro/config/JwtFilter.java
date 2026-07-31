@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -23,11 +22,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
-    @Autowired
-    private JwtService jwtService;
+    private final JwtService jwtService;
+    private final UsuarioService usuarioService;
 
-    @Autowired
-    private UsuarioService usuarioService;
+    public JwtFilter(JwtService jwtService, UsuarioService usuarioService) {
+        this.jwtService = jwtService;
+        this.usuarioService = usuarioService;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

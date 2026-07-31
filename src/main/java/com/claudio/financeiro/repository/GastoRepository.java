@@ -30,4 +30,12 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
     boolean existsByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
 
     Optional<Gasto> findByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
+
+    List<Gasto> findByUsuarioIdAndGrupoParcelamentoIsNotNull(Long usuarioId);
+
+    @Query("SELECT YEAR(g.data), MONTH(g.data), SUM(g.valor) FROM Gasto g " +
+           "WHERE g.usuario.id = :usuarioId AND g.pago = true " +
+           "AND g.data >= :desde GROUP BY YEAR(g.data), MONTH(g.data)")
+    List<Object[]> somarGastosPagosAgrupadoPorMes(@Param("usuarioId") Long usuarioId,
+                                                   @Param("desde") LocalDate desde);
 }

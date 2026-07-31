@@ -4,17 +4,18 @@ import com.claudio.financeiro.dto.CriarGastoFixoRequest;
 import com.claudio.financeiro.dto.GastoFixoDTO;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.GastoFixo;
+import com.claudio.financeiro.model.StatusGastoFixo;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoFixoRepository;
 import com.claudio.financeiro.repository.GastoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -31,19 +32,21 @@ public class GastoFixoService {
     // sem número mágico duplicado (ver spec "Fora de escopo"/"Lembrete de pagamento").
     private static final int DIAS_LIMIAR_ALERTA = 3;
 
-    @Autowired
-    private GastoFixoRepository gastoFixoRepository;
-
-    @Autowired
-    private GastoRepository gastoRepository;
-
-    @Autowired
-    private JavaMailSender mailSender;
+    private final GastoFixoRepository gastoFixoRepository;
+    private final GastoRepository gastoRepository;
+    private final JavaMailSender mailSender;
 
     // Desligado até o .env ter credenciais de e-mail reais (ver application.properties).
     // O aviso dentro do app não depende disso — só o e-mail em si fica pausado.
     @Value("${app.email.lembrete-habilitado:false}")
     private boolean lembretePorEmailHabilitado;
+
+    public GastoFixoService(GastoFixoRepository gastoFixoRepository, GastoRepository gastoRepository,
+                            JavaMailSender mailSender) {
+        this.gastoFixoRepository = gastoFixoRepository;
+        this.gastoRepository = gastoRepository;
+        this.mailSender = mailSender;
+    }
 
     public GastoFixoDTO criar(CriarGastoFixoRequest request, Usuario usuarioLogado) {
         GastoFixo fixo = paraEntidade(request, usuarioLogado);
@@ -93,7 +96,7 @@ public class GastoFixoService {
     /** Usado pelo aviso no Resumo. Dispara o e-mail de lembrete como efeito colateral (ver método privado). */
     public List<GastoFixoDTO> listarPendentesAlerta(Usuario usuarioLogado) {
         List<GastoFixoDTO> pendentes = listarComStatus(usuarioLogado.getId()).stream()
-                .filter(dto -> "VENCENDO".equals(dto.getStatusMesAtual()) || "ATRASADO".equals(dto.getStatusMesAtual()))
+                .filter(dto -> dto.getStatusMesAtual() == StatusGastoFixo.VENCENDO || dto.getStatusMesAtual() == StatusGastoFixo.ATRASADO)
                 .collect(Collectors.toList());
 
         pendentes.forEach(dto -> enviarLembretePorEmailSeNecessario(dto, usuarioLogado));
@@ -106,6 +109,7 @@ public class GastoFixoService {
      * chamada em toda leitura de gastos de um mês (calcularResumo, filtrarGastos, evolução),
      * porque o servidor não roda 24/7 hoje.
      */
+    @Transactional
     public void garantirGastosDoMesGerados(Long usuarioId, int mes, int ano) {
         YearMonth referencia = YearMonth.of(ano, mes);
 
@@ -170,10 +174,10 @@ public class GastoFixoService {
                 .findByGastoFixoIdAndDataBetween(fixo.getId(), mesAtual.atDay(1), mesAtual.atEndOfMonth())
                 .orElse(null);
 
-        String status;
+        StatusGastoFixo status;
         Long gastoDoMesId = null;
         if (gastoDoMes == null) {
-            status = "PENDENTE"; // ainda não gerado esse mês (ex: dataInicio no futuro)
+            status = StatusGastoFixo.PENDENTE;
         } else {
             gastoDoMesId = gastoDoMes.getId();
             status = calcularStatus(gastoDoMes.isPago(), gastoDoMes.getData(), hoje);
@@ -193,11 +197,11 @@ public class GastoFixoService {
         );
     }
 
-    private String calcularStatus(boolean pago, LocalDate dataVencimento, LocalDate hoje) {
-        if (pago) return "PAGO";
-        if (dataVencimento.isBefore(hoje)) return "ATRASADO";
-        if (!dataVencimento.isAfter(hoje.plusDays(DIAS_LIMIAR_ALERTA))) return "VENCENDO";
-        return "PENDENTE";
+    private StatusGastoFixo calcularStatus(boolean pago, LocalDate dataVencimento, LocalDate hoje) {
+        if (pago) return StatusGastoFixo.PAGO;
+        if (dataVencimento.isBefore(hoje)) return StatusGastoFixo.ATRASADO;
+        if (!dataVencimento.isAfter(hoje.plusDays(DIAS_LIMIAR_ALERTA))) return StatusGastoFixo.VENCENDO;
+        return StatusGastoFixo.PENDENTE;
     }
 
     // Dia 31 num mês que só tem 28/29/30 dias cai no último dia do mês.

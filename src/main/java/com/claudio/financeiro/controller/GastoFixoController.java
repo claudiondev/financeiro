@@ -5,7 +5,6 @@ import com.claudio.financeiro.dto.GastoFixoDTO;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.GastoFixoService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +14,11 @@ import java.util.List;
 @RequestMapping("/gastos-fixos")
 public class GastoFixoController {
 
-    @Autowired
-    private GastoFixoService gastoFixoService;
+    private final GastoFixoService gastoFixoService;
+
+    public GastoFixoController(GastoFixoService gastoFixoService) {
+        this.gastoFixoService = gastoFixoService;
+    }
 
     @PostMapping
     public GastoFixoDTO criar(@Valid @RequestBody CriarGastoFixoRequest request, Authentication authentication) {

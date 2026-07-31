@@ -5,10 +5,10 @@ import com.claudio.financeiro.dto.OrcamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Orcamento;
+import com.claudio.financeiro.model.StatusOrcamento;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,14 +24,16 @@ public class OrcamentoService {
     private static final BigDecimal LIMIAR_ATENCAO = BigDecimal.valueOf(80);
     private static final BigDecimal LIMIAR_ESTOURADO = BigDecimal.valueOf(100);
 
-    @Autowired
-    private OrcamentoRepository orcamentoRepository;
+    private final OrcamentoRepository orcamentoRepository;
+    private final GastoRepository gastoRepository;
+    private final GastoFixoService gastoFixoService;
 
-    @Autowired
-    private GastoRepository gastoRepository;
-
-    @Autowired
-    private GastoFixoService gastoFixoService;
+    public OrcamentoService(OrcamentoRepository orcamentoRepository, GastoRepository gastoRepository,
+                            GastoFixoService gastoFixoService) {
+        this.orcamentoRepository = orcamentoRepository;
+        this.gastoRepository = gastoRepository;
+        this.gastoFixoService = gastoFixoService;
+    }
 
     // Upsert por categoria: usuário define o limite uma vez, atualizações seguintes só ajustam o valor
     public OrcamentoDTO salvarOuAtualizar(CriarOrcamentoRequest request, Usuario usuarioLogado) {
@@ -106,9 +108,9 @@ public class OrcamentoService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private String statusDoConsumo(BigDecimal percentual) {
-        if (percentual.compareTo(LIMIAR_ESTOURADO) >= 0) return "ESTOURADO";
-        if (percentual.compareTo(LIMIAR_ATENCAO) >= 0) return "ATENCAO";
-        return "DENTRO_DO_LIMITE";
+    private StatusOrcamento statusDoConsumo(BigDecimal percentual) {
+        if (percentual.compareTo(LIMIAR_ESTOURADO) >= 0) return StatusOrcamento.ESTOURADO;
+        if (percentual.compareTo(LIMIAR_ATENCAO) >= 0) return StatusOrcamento.ATENCAO;
+        return StatusOrcamento.DENTRO_DO_LIMITE;
     }
 }
