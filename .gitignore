@@ -31,7 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-src/main/resources/application*.properties
 .env
 
 ### Anotações locais de progresso (não sobe pro GitHub) ###
