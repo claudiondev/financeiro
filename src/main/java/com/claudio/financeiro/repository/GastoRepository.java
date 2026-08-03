@@ -8,7 +8,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
@@ -29,7 +28,11 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
     // gasto do mês já existe antes de gerar de novo (idempotência).
     boolean existsByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
 
-    Optional<Gasto> findByGastoFixoIdAndDataBetween(Long gastoFixoId, LocalDate inicio, LocalDate fim);
+    // Lista (não Optional): em tese só existe um Gasto por GastoFixo+mês, mas uma corrida
+    // concorrente em garantirGastosDoMesGerados já gerou duplicata em produção (ver V11) —
+    // essa busca não pode quebrar se isso acontecer de novo. Ordenado por id para ser
+    // determinístico sobre qual dos dois "vence" ao exibir o status.
+    List<Gasto> findByGastoFixoIdAndDataBetweenOrderByIdAsc(Long gastoFixoId, LocalDate inicio, LocalDate fim);
 
     List<Gasto> findByUsuarioIdAndGrupoParcelamentoIsNotNull(Long usuarioId);
 
