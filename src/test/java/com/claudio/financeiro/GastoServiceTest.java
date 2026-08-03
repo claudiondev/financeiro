@@ -154,6 +154,52 @@ class GastoServiceTest {
         verify(gastoRepository).deleteById(10L);
     }
 
+    @Test
+    void deveLancarBadRequestAoDeletarParcelaIndividual() {
+        Gasto parcela = gastoComUsuario(1L);
+        parcela.setGrupoParcelamento("grupo-1");
+        when(gastoRepository.findById(10L)).thenReturn(Optional.of(parcela));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> gastoService.deletar(10L, 1L)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(gastoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deveDeletarTodasAsParcelasDoGrupo() {
+        Gasto parcela1 = gastoComUsuario(1L);
+        parcela1.setId(10L);
+        parcela1.setGrupoParcelamento("grupo-1");
+        Gasto parcela2 = gastoComUsuario(1L);
+        parcela2.setId(11L);
+        parcela2.setGrupoParcelamento("grupo-1");
+        when(gastoRepository.findById(10L)).thenReturn(Optional.of(parcela1));
+        when(gastoRepository.findByUsuarioIdAndGrupoParcelamento(1L, "grupo-1"))
+                .thenReturn(List.of(parcela1, parcela2));
+
+        gastoService.deletarParcelamento(10L, 1L);
+
+        verify(gastoRepository).deleteAll(List.of(parcela1, parcela2));
+    }
+
+    @Test
+    void deveLancarBadRequestAoDeletarParcelamentoDeGastoNaoParcelado() {
+        Gasto gasto = gastoComUsuario(1L);
+        when(gastoRepository.findById(10L)).thenReturn(Optional.of(gasto));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> gastoService.deletarParcelamento(10L, 1L)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(gastoRepository, never()).deleteAll(any());
+    }
+
     // IDOR: usuário 2 tenta deletar gasto do usuário 1
     @Test
     void deveLancarForbiddenAoDeletarGastoDeOutroUsuario() {

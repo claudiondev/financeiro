@@ -36,6 +36,8 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
     List<Gasto> findByUsuarioIdAndGrupoParcelamentoIsNotNull(Long usuarioId);
 
+    List<Gasto> findByUsuarioIdAndGrupoParcelamento(Long usuarioId, String grupoParcelamento);
+
     @Query("SELECT YEAR(g.data), MONTH(g.data), SUM(g.valor) FROM Gasto g " +
            "WHERE g.usuario.id = :usuarioId AND g.pago = true " +
            "AND g.data >= :desde GROUP BY YEAR(g.data), MONTH(g.data)")

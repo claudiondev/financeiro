@@ -58,6 +58,13 @@ public class GastoController {
         gastoService.deletar(id, usuarioLogado.getId());
     }
 
+    // Apaga todas as parcelas da compra de uma vez — única forma de remover um gasto parcelado.
+    @DeleteMapping("/{id}/parcelamento")
+    public void deletarParcelamento(@PathVariable Long id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        gastoService.deletarParcelamento(id, usuarioLogado.getId());
+    }
+
     @PatchMapping("/{id}/pagar")
     public GastoDTO marcarComoPago(@PathVariable Long id, Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();

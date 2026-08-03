@@ -99,9 +99,27 @@ public class GastoService {
                 .collect(Collectors.toList());
     }
 
+    // Uma parcela isolada não pode ser apagada — deixaria totalParcelas/numeroParcela das
+    // demais inconsistente (ex.: "3/5" sem a parcela 2 nunca ter existido). Quem quer remover
+    // a compra parcelada usa deletarParcelamento, que apaga o grupo inteiro de uma vez.
     public void deletar(Long id, Long usuarioId) {
-        buscarComOwnership(id, usuarioId);
+        Gasto gasto = buscarComOwnership(id, usuarioId);
+        if (gasto.getGrupoParcelamento() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Esse gasto faz parte de uma compra parcelada — para removê-lo, delete a compra inteira");
+        }
         gastoRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void deletarParcelamento(Long id, Long usuarioId) {
+        Gasto gasto = buscarComOwnership(id, usuarioId);
+        if (gasto.getGrupoParcelamento() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esse gasto não faz parte de uma compra parcelada");
+        }
+        gastoRepository.deleteAll(
+                gastoRepository.findByUsuarioIdAndGrupoParcelamento(usuarioId, gasto.getGrupoParcelamento())
+        );
     }
 
     public List<GastoDTO> filtrarGastos(Long usuarioId, CategoriaGasto categoria, Integer mes, Integer ano) {
