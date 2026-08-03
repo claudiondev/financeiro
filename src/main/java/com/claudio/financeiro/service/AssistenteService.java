@@ -12,11 +12,13 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,6 +34,10 @@ public class AssistenteService implements GeradorDeInsight {
     private static final BigDecimal AUMENTO_MINIMO_ABSOLUTO = BigDecimal.valueOf(50);
     private static final int MAXIMO_INSIGHTS = 5;
     private static final int MAXIMO_DICAS = 2;
+
+    // Mesmo formato pt-BR (R$ 1.234,56) que o frontend usa via Intl.NumberFormat — sem isso,
+    // as mensagens do Assistente saíam com separador decimal americano ("R$ 1240.00").
+    private static final NumberFormat MOEDA = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
 
     private final OrcamentoService orcamentoService;
     private final GastoRepository gastoRepository;
@@ -106,8 +112,8 @@ public class AssistenteService implements GeradorDeInsight {
                 TipoInsight.RITMO_ACIMA_DO_ORCAMENTO, Severidade.CRITICO, null,
                 "Ritmo de gastos acima do planejado",
                 String.format(
-                        "No ritmo atual, você deve fechar o mês em torno de R$ %s, acima da soma dos seus orçamentos (R$ %s).",
-                        projecao.setScale(2, RoundingMode.HALF_UP), somaOrcamentos.setScale(2, RoundingMode.HALF_UP)
+                        "No ritmo atual, você deve fechar o mês em torno de %s, acima da soma dos seus orçamentos (%s).",
+                        MOEDA.format(projecao), MOEDA.format(somaOrcamentos)
                 )
         ));
     }
@@ -138,10 +144,10 @@ public class AssistenteService implements GeradorDeInsight {
                         TipoInsight.CATEGORIA_EM_ALTA, Severidade.ATENCAO, categoria,
                         "Categoria em alta",
                         String.format(
-                                "Seus gastos com %s subiram %s%% em relação ao mês passado (R$ %s a mais).",
+                                "Seus gastos com %s subiram %s%% em relação ao mês passado (%s a mais).",
                                 categoria.getDescricao(),
                                 crescimentoPercentual.setScale(0, RoundingMode.HALF_UP),
-                                aumento.setScale(2, RoundingMode.HALF_UP)
+                                MOEDA.format(aumento)
                         )
                 ));
             }
