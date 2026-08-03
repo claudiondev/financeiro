@@ -11,6 +11,7 @@ import com.claudio.financeiro.repository.GastoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -132,7 +133,17 @@ public class GastoFixoService {
             gasto.setGastoFixo(fixo);
             gasto.setPago(false);
             gasto.setData(diaAjustado(referencia, fixo.getDiaVencimento()));
-            gastoRepository.save(gasto);
+
+            // Duas requisições concorrentes (ex.: Resumo e o alerta de contas vencendo,
+            // carregados em paralelo) podem passar pelo "já existe?" acima ao mesmo tempo,
+            // antes de qualquer uma salvar. A constraint única (gasto_fixo_id, data) do
+            // banco (migração V11) rejeita a segunda gravação — aqui só ignoramos: a outra
+            // requisição já gerou o gasto do mês, não há nada a fazer.
+            try {
+                gastoRepository.save(gasto);
+            } catch (DataIntegrityViolationException e) {
+                log.info("Gasto do mês já gerado por outra requisição concorrente pra gastoFixo id={}", fixo.getId());
+            }
         }
     }
 
@@ -170,8 +181,12 @@ public class GastoFixoService {
         YearMonth mesAtual = YearMonth.from(hoje);
         LocalDate dataVencimento = diaAjustado(mesAtual, fixo.getDiaVencimento());
 
+        // .findFirst() (não um único resultado direto): ver nota de findByGastoFixoIdAndDataBetweenOrderByIdAsc
+        // no repository — precisa tolerar uma eventual duplicata sem quebrar a tela inteira.
         Gasto gastoDoMes = gastoRepository
-                .findByGastoFixoIdAndDataBetween(fixo.getId(), mesAtual.atDay(1), mesAtual.atEndOfMonth())
+                .findByGastoFixoIdAndDataBetweenOrderByIdAsc(fixo.getId(), mesAtual.atDay(1), mesAtual.atEndOfMonth())
+                .stream()
+                .findFirst()
                 .orElse(null);
 
         StatusGastoFixo status;

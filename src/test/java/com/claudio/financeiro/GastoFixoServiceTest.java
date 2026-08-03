@@ -82,6 +82,25 @@ class GastoFixoServiceTest {
         verify(gastoRepository, never()).save(any());
     }
 
+    // Corrida concorrente: duas requisições passam pela checagem "já existe?" antes de
+    // qualquer uma salvar. A constraint única do banco (migração V11) rejeita a segunda
+    // gravação — o método não pode propagar essa exceção, é um resultado esperado.
+    @Test
+    void naoDeveQuebrarQuandoOutraRequisicaoConcorrenteJaGerouOGastoDoMes() {
+        GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
+        YearMonth mesAtual = YearMonth.now();
+
+        when(gastoFixoRepository.findByUsuarioIdAndAtivoTrue(1L)).thenReturn(List.of(fixo));
+        when(gastoRepository.existsByGastoFixoIdAndDataBetween(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(false);
+        when(gastoRepository.save(any(Gasto.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("uk_gasto_fixo_data"));
+
+        assertDoesNotThrow(() ->
+                gastoFixoService.garantirGastosDoMesGerados(1L, mesAtual.getMonthValue(), mesAtual.getYear())
+        );
+    }
+
     @Test
     void naoDeveGerarQuandoDataInicioForNoFuturo() {
         GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
@@ -124,7 +143,7 @@ class GastoFixoServiceTest {
             salvo.setId(20L);
             return salvo;
         });
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(eq(20L), any(), any())).thenReturn(Optional.empty());
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(20L), any(), any())).thenReturn(List.of());
 
         GastoFixoDTO resultado = gastoFixoService.criar(request, usuario);
 
@@ -138,7 +157,7 @@ class GastoFixoServiceTest {
         GastoFixo existente = fixoComId(10L, usuarioComId(1L), 5);
         when(gastoFixoRepository.findById(10L)).thenReturn(Optional.of(existente));
         when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(eq(10L), any(), any())).thenReturn(Optional.empty());
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
 
         CriarGastoFixoRequest request = new CriarGastoFixoRequest(
                 CategoriaGasto.LAZER, BigDecimal.valueOf(60.0), "Streaming", 15, LocalDate.now().minusMonths(2)
@@ -195,7 +214,7 @@ class GastoFixoServiceTest {
         GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
         when(gastoFixoRepository.findById(10L)).thenReturn(Optional.of(fixo));
         when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(eq(10L), any(), any())).thenReturn(Optional.empty());
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
 
         GastoFixoDTO resultado = gastoFixoService.pausar(10L, 1L);
 
@@ -209,7 +228,7 @@ class GastoFixoServiceTest {
         fixo.setAtivo(false);
         when(gastoFixoRepository.findById(10L)).thenReturn(Optional.of(fixo));
         when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(eq(10L), any(), any())).thenReturn(Optional.empty());
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
 
         GastoFixoDTO resultado = gastoFixoService.reativar(10L, 1L);
 
@@ -238,6 +257,39 @@ class GastoFixoServiceTest {
     void deveRetornarStatusPagoQuandoGastoDoMesJaFoiPago() {
         List<GastoFixoDTO> resultado = listarComStatusMockandoGastoDoMes(true, LocalDate.now().minusDays(2));
         assertEquals(StatusGastoFixo.PAGO, resultado.get(0).getStatusMesAtual());
+    }
+
+    // Bug real em produção: uma duplicata (2 Gasto pro mesmo GastoFixo+mês, ver migração V11)
+    // fazia a busca por "o gasto do mês" quebrar com 500, derrubando a tela inteira de Contas
+    // Fixas. A leitura precisa tolerar isso e seguir com o primeiro (mais antigo) dos dois.
+    @Test
+    void naoDeveQuebrarQuandoExisteGastoDuplicadoNoMes() {
+        Usuario usuario = usuarioComId(1L);
+        GastoFixo fixo = fixoComId(10L, usuario, 5);
+        YearMonth mesAtual = YearMonth.now();
+
+        when(gastoFixoRepository.findByUsuarioIdAndAtivoTrue(1L)).thenReturn(List.of(fixo));
+        when(gastoRepository.existsByGastoFixoIdAndDataBetween(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(true);
+        when(gastoFixoRepository.findByUsuarioId(1L)).thenReturn(List.of(fixo));
+
+        Gasto maisAntigo = new Gasto();
+        maisAntigo.setId(50L);
+        maisAntigo.setPago(false);
+        maisAntigo.setData(LocalDate.now().plusDays(1));
+
+        Gasto duplicata = new Gasto();
+        duplicata.setId(51L);
+        duplicata.setPago(false);
+        duplicata.setData(LocalDate.now().plusDays(1));
+
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(List.of(maisAntigo, duplicata));
+
+        List<GastoFixoDTO> resultado = gastoFixoService.listarComStatus(1L);
+
+        assertEquals(1, resultado.size());
+        assertEquals(50L, resultado.get(0).getGastoDoMesId());
     }
 
     @Test
@@ -306,8 +358,8 @@ class GastoFixoServiceTest {
         gastoDoMes.setId(50L);
         gastoDoMes.setPago(pago);
         gastoDoMes.setData(dataVencimento);
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
-                .thenReturn(Optional.of(gastoDoMes));
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(List.of(gastoDoMes));
 
         return gastoFixoService.listarComStatus(1L);
     }
@@ -326,8 +378,8 @@ class GastoFixoServiceTest {
         gastoDoMes.setPago(pago);
         gastoDoMes.setData(dataVencimento);
         gastoDoMes.setUltimoLembreteEnviadoEm(ultimoLembrete);
-        when(gastoRepository.findByGastoFixoIdAndDataBetween(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
-                .thenReturn(Optional.of(gastoDoMes));
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(List.of(gastoDoMes));
         when(gastoRepository.findById(50L)).thenReturn(Optional.of(gastoDoMes));
 
         return gastoDoMes;
