@@ -1,11 +1,14 @@
 package com.claudio.financeiro.service;
 
 import com.claudio.financeiro.dto.CriarOrcamentoRequest;
+import com.claudio.financeiro.dto.InsightDTO;
 import com.claudio.financeiro.dto.OrcamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Orcamento;
+import com.claudio.financeiro.model.Severidade;
 import com.claudio.financeiro.model.StatusOrcamento;
+import com.claudio.financeiro.model.TipoInsight;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
@@ -15,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -81,6 +85,37 @@ public class OrcamentoService {
                 .filter(Gasto::isPago)
                 .map(Gasto::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Verifica se o gasto recém-criado levou a categoria a estourar ou chegar perto do limite —
+     * usado por GastoService.criar() pra devolver um aviso não bloqueante (Fase 6). Retorna null
+     * se não há orçamento definido pra essa categoria, ou se o consumo segue dentro do limite.
+     */
+    public InsightDTO avaliarAvisoDeEstouro(Long usuarioId, CategoriaGasto categoria, LocalDate data) {
+        return orcamentoRepository.findByUsuarioIdAndCategoria(usuarioId, categoria)
+                .map(orcamento -> criarAvisoSeNecessario(usuarioId, orcamento, data))
+                .orElse(null);
+    }
+
+    private InsightDTO criarAvisoSeNecessario(Long usuarioId, Orcamento orcamento, LocalDate data) {
+        BigDecimal consumido = calcularConsumoDaCategoria(usuarioId, orcamento.getCategoria(), data.getMonthValue(), data.getYear());
+        BigDecimal percentual = calcularPercentual(consumido, orcamento.getLimiteMensal());
+        StatusOrcamento status = statusDoConsumo(percentual);
+
+        if (status == StatusOrcamento.DENTRO_DO_LIMITE) {
+            return null;
+        }
+
+        boolean estourado = status == StatusOrcamento.ESTOURADO;
+        return new InsightDTO(
+                estourado ? TipoInsight.ORCAMENTO_ESTOURADO : TipoInsight.ORCAMENTO_ATENCAO,
+                estourado ? Severidade.CRITICO : Severidade.ATENCAO,
+                orcamento.getCategoria(),
+                estourado ? "Orçamento estourado" : "Orçamento quase no limite",
+                String.format("Esse gasto levou o orçamento de %s a %s%% do limite mensal.",
+                        orcamento.getCategoria().getDescricao(), percentual.setScale(0, RoundingMode.HALF_UP))
+        );
     }
 
     private OrcamentoDTO toDTOComConsumo(Orcamento orcamento, Integer mes, Integer ano) {

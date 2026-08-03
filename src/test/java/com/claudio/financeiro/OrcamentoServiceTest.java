@@ -1,11 +1,13 @@
 package com.claudio.financeiro;
 
 import com.claudio.financeiro.dto.CriarOrcamentoRequest;
+import com.claudio.financeiro.dto.InsightDTO;
 import com.claudio.financeiro.dto.OrcamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.Orcamento;
 import com.claudio.financeiro.model.StatusOrcamento;
+import com.claudio.financeiro.model.TipoInsight;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
@@ -136,6 +138,48 @@ class OrcamentoServiceTest {
 
         // Só os 500 pagos contam pro consumo — os 300 da conta fixa pendente ficam de fora
         assertEquals(0, BigDecimal.valueOf(500.0).compareTo(resultado.get(0).getValorConsumido()));
+    }
+
+    @Test
+    void avaliarAvisoDeEstouroDeveRetornarNullSemOrcamentoNaCategoria() {
+        when(orcamentoRepository.findByUsuarioIdAndCategoria(1L, CategoriaGasto.LAZER)).thenReturn(Optional.empty());
+
+        InsightDTO aviso = orcamentoService.avaliarAvisoDeEstouro(1L, CategoriaGasto.LAZER, LocalDate.of(2026, 7, 10));
+
+        assertNull(aviso);
+    }
+
+    @Test
+    void avaliarAvisoDeEstouroDeveRetornarNullDentroDoLimite() {
+        Orcamento orcamento = orcamentoComLimite(usuarioComId(1L), CategoriaGasto.ALIMENTACAO, 500.0);
+        when(orcamentoRepository.findByUsuarioIdAndCategoria(1L, CategoriaGasto.ALIMENTACAO)).thenReturn(Optional.of(orcamento));
+        when(gastoRepository.findByFiltros(1L, CategoriaGasto.ALIMENTACAO, 7, 2026)).thenReturn(List.of(gastoComValor(100.0)));
+
+        InsightDTO aviso = orcamentoService.avaliarAvisoDeEstouro(1L, CategoriaGasto.ALIMENTACAO, LocalDate.of(2026, 7, 10));
+
+        assertNull(aviso);
+    }
+
+    @Test
+    void avaliarAvisoDeEstouroDeveSinalizarEstouradoAcimaDe100Porcento() {
+        Orcamento orcamento = orcamentoComLimite(usuarioComId(1L), CategoriaGasto.LAZER, 100.0);
+        when(orcamentoRepository.findByUsuarioIdAndCategoria(1L, CategoriaGasto.LAZER)).thenReturn(Optional.of(orcamento));
+        when(gastoRepository.findByFiltros(1L, CategoriaGasto.LAZER, 7, 2026)).thenReturn(List.of(gastoComValor(150.0)));
+
+        InsightDTO aviso = orcamentoService.avaliarAvisoDeEstouro(1L, CategoriaGasto.LAZER, LocalDate.of(2026, 7, 10));
+
+        assertEquals(TipoInsight.ORCAMENTO_ESTOURADO, aviso.getTipo());
+    }
+
+    @Test
+    void avaliarAvisoDeEstouroDeveSinalizarAtencaoAPartirDe80Porcento() {
+        Orcamento orcamento = orcamentoComLimite(usuarioComId(1L), CategoriaGasto.SAUDE, 200.0);
+        when(orcamentoRepository.findByUsuarioIdAndCategoria(1L, CategoriaGasto.SAUDE)).thenReturn(Optional.of(orcamento));
+        when(gastoRepository.findByFiltros(1L, CategoriaGasto.SAUDE, 7, 2026)).thenReturn(List.of(gastoComValor(160.0)));
+
+        InsightDTO aviso = orcamentoService.avaliarAvisoDeEstouro(1L, CategoriaGasto.SAUDE, LocalDate.of(2026, 7, 10));
+
+        assertEquals(TipoInsight.ORCAMENTO_ATENCAO, aviso.getTipo());
     }
 
     @Test

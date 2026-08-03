@@ -91,8 +91,8 @@ class IntegracaoEndpointTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(gasto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.descricao").value("Teste integração"))
-                .andExpect(jsonPath("$.valor").value(99.90));
+                .andExpect(jsonPath("$.gasto.descricao").value("Teste integração"))
+                .andExpect(jsonPath("$.gasto.valor").value(99.90));
 
         mockMvc.perform(get("/gastos")
                         .header("Authorization", "Bearer " + tokenUsuarioA))
@@ -132,7 +132,7 @@ class IntegracaoEndpointTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Long gastoId = objectMapper.readTree(criacao.getResponse().getContentAsString()).get("id").asLong();
+        Long gastoId = objectMapper.readTree(criacao.getResponse().getContentAsString()).get("gasto").get("id").asLong();
 
         mockMvc.perform(delete("/gastos/" + gastoId)
                         .header("Authorization", "Bearer " + tokenUsuarioB))

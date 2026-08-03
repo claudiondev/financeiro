@@ -1,7 +1,9 @@
 package com.claudio.financeiro.service;
 
 import com.claudio.financeiro.dto.CriarGastoRequest;
+import com.claudio.financeiro.dto.CriarGastoResponse;
 import com.claudio.financeiro.dto.GastoDTO;
+import com.claudio.financeiro.dto.InsightDTO;
 import com.claudio.financeiro.dto.ParcelamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.FormaPagamento;
@@ -28,35 +30,40 @@ public class GastoService {
 
     private final GastoRepository gastoRepository;
     private final GastoFixoService gastoFixoService;
+    private final OrcamentoService orcamentoService;
 
-    public GastoService(GastoRepository gastoRepository, GastoFixoService gastoFixoService) {
+    public GastoService(GastoRepository gastoRepository, GastoFixoService gastoFixoService, OrcamentoService orcamentoService) {
         this.gastoRepository = gastoRepository;
         this.gastoFixoService = gastoFixoService;
+        this.orcamentoService = orcamentoService;
     }
 
     @Transactional
-    public GastoDTO criar(CriarGastoRequest request, Usuario usuarioLogado) {
+    public CriarGastoResponse criar(CriarGastoRequest request, Usuario usuarioLogado) {
         int parcelas = parcelasValidadas(request);
+        Gasto principal;
 
         if (parcelas == 1) {
-            return toDTO(salvar(paraEntidade(request, usuarioLogado)));
+            principal = salvar(paraEntidade(request, usuarioLogado));
+        } else {
+            String grupo = UUID.randomUUID().toString();
+            List<BigDecimal> valores = dividirEmParcelas(request.getValor(), parcelas);
+            List<Gasto> criadas = new ArrayList<>();
+
+            for (int i = 0; i < parcelas; i++) {
+                Gasto parcela = paraEntidade(request, usuarioLogado);
+                parcela.setValor(valores.get(i));
+                parcela.setData(request.getData().plusMonths(i));
+                parcela.setGrupoParcelamento(grupo);
+                parcela.setNumeroParcela(i + 1);
+                parcela.setTotalParcelas(parcelas);
+                criadas.add(salvar(parcela));
+            }
+            principal = criadas.get(0);
         }
 
-        String grupo = UUID.randomUUID().toString();
-        List<BigDecimal> valores = dividirEmParcelas(request.getValor(), parcelas);
-        List<Gasto> criadas = new ArrayList<>();
-
-        for (int i = 0; i < parcelas; i++) {
-            Gasto parcela = paraEntidade(request, usuarioLogado);
-            parcela.setValor(valores.get(i));
-            parcela.setData(request.getData().plusMonths(i));
-            parcela.setGrupoParcelamento(grupo);
-            parcela.setNumeroParcela(i + 1);
-            parcela.setTotalParcelas(parcelas);
-            criadas.add(salvar(parcela));
-        }
-
-        return toDTO(criadas.get(0));
+        InsightDTO aviso = orcamentoService.avaliarAvisoDeEstouro(usuarioLogado.getId(), principal.getCategoria(), principal.getData());
+        return new CriarGastoResponse(toDTO(principal), aviso);
     }
 
     public List<ParcelamentoDTO> listarParcelamentosEmAberto(Long usuarioId) {

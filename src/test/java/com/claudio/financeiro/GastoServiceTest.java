@@ -1,15 +1,20 @@
 package com.claudio.financeiro;
 
 import com.claudio.financeiro.dto.CriarGastoRequest;
+import com.claudio.financeiro.dto.CriarGastoResponse;
 import com.claudio.financeiro.dto.GastoDTO;
+import com.claudio.financeiro.dto.InsightDTO;
 import com.claudio.financeiro.dto.ParcelamentoDTO;
 import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.FormaPagamento;
 import com.claudio.financeiro.model.Gasto;
+import com.claudio.financeiro.model.Severidade;
+import com.claudio.financeiro.model.TipoInsight;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoRepository;
 import com.claudio.financeiro.service.GastoFixoService;
 import com.claudio.financeiro.service.GastoService;
+import com.claudio.financeiro.service.OrcamentoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +42,9 @@ class GastoServiceTest {
     @Mock
     private GastoFixoService gastoFixoService;
 
+    @Mock
+    private OrcamentoService orcamentoService;
+
     @InjectMocks
     private GastoService gastoService;
 
@@ -49,12 +57,30 @@ class GastoServiceTest {
         );
         when(gastoRepository.save(any(Gasto.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
 
-        GastoDTO resultado = gastoService.criar(request, usuario);
+        GastoDTO resultado = gastoService.criar(request, usuario).getGasto();
 
         assertEquals("Mercado", resultado.getDescricao());
         assertEquals(CategoriaGasto.ALIMENTACAO, resultado.getCategoria());
         assertEquals(1L, resultado.getUsuarioId());
         assertValorIgual(250.0, resultado.getValor());
+    }
+
+    @Test
+    void deveIncluirAvisoDeOrcamentoQuandoGastoEstouraCategoria() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        CriarGastoRequest request = requestSimples(
+                "Mercado", BigDecimal.valueOf(250.0), CategoriaGasto.ALIMENTACAO, LocalDate.of(2026, 7, 10)
+        );
+        InsightDTO aviso = new InsightDTO(TipoInsight.ORCAMENTO_ESTOURADO, Severidade.CRITICO,
+                CategoriaGasto.ALIMENTACAO, "Orçamento estourado", "mensagem");
+        when(gastoRepository.save(any(Gasto.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+        when(orcamentoService.avaliarAvisoDeEstouro(1L, CategoriaGasto.ALIMENTACAO, LocalDate.of(2026, 7, 10)))
+                .thenReturn(aviso);
+
+        CriarGastoResponse resposta = gastoService.criar(request, usuario);
+
+        assertEquals(aviso, resposta.getAvisoOrcamento());
     }
 
     @Test
@@ -237,7 +263,7 @@ class GastoServiceTest {
         request.setTotalParcelas(1);
         when(gastoRepository.save(any(Gasto.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        GastoDTO resultado = gastoService.criar(request, usuario);
+        GastoDTO resultado = gastoService.criar(request, usuario).getGasto();
 
         verify(gastoRepository, times(1)).save(any());
         assertNull(resultado.getNumeroParcela());

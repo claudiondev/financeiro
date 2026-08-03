@@ -1,6 +1,7 @@
 package com.claudio.financeiro.controller;
 
 import com.claudio.financeiro.dto.CriarGastoRequest;
+import com.claudio.financeiro.dto.CriarGastoResponse;
 import com.claudio.financeiro.dto.EvolucaoMensalDTO;
 import com.claudio.financeiro.dto.GastoDTO;
 import com.claudio.financeiro.dto.ParcelamentoDTO;
@@ -34,7 +35,7 @@ public class GastoController {
     }
 
     @PostMapping
-    public GastoDTO criar(@Valid @RequestBody CriarGastoRequest request, Authentication authentication) {
+    public CriarGastoResponse criar(@Valid @RequestBody CriarGastoRequest request, Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         return gastoService.criar(request, usuarioLogado);
     }
