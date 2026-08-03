@@ -1,7 +1,7 @@
 package com.claudio.financeiro.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +15,9 @@ public class RedefinirSenhaRequest {
     private String codigo;
 
     @NotBlank
-    @Size(min = 6)
+    @Pattern(
+            regexp = "^(?=.*[A-Z])(?=.*\\d).{8,}$",
+            message = "A senha deve ter pelo menos 8 caracteres, incluindo uma letra maiúscula e um número"
+    )
     private String novaSenha;
 }

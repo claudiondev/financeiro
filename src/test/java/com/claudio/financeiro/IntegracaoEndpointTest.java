@@ -42,8 +42,8 @@ class IntegracaoEndpointTest {
     @BeforeEach
     void setUp() throws Exception {
         when(rateLimiterService.excedeuLimite(anyString())).thenReturn(false);
-        tokenUsuarioA = registrarELogar("usera_" + System.nanoTime() + "@teste.com", "senha123");
-        tokenUsuarioB = registrarELogar("userb_" + System.nanoTime() + "@teste.com", "senha456");
+        tokenUsuarioA = registrarELogar("usera_" + System.nanoTime() + "@teste.com", "Senha123");
+        tokenUsuarioB = registrarELogar("userb_" + System.nanoTime() + "@teste.com", "Senha456");
     }
 
     @Test
@@ -66,15 +66,26 @@ class IntegracaoEndpointTest {
         mockMvc.perform(post("/auth/registrar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                Map.of("email", email, "senha", "minhasenha"))))
+                                Map.of("email", email, "senha", "MinhaSenha1"))))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                Map.of("email", email, "senha", "minhasenha"))))
+                                Map.of("email", email, "senha", "MinhaSenha1"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.emptyString())));
+    }
+
+    @Test
+    void deveRetornar400AoRegistrarComSenhaFraca() throws Exception {
+        String email = "senhafraca_" + System.nanoTime() + "@teste.com";
+
+        mockMvc.perform(post("/auth/registrar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", email, "senha", "semmaiuscula1"))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
