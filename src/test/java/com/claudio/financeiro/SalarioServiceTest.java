@@ -109,6 +109,28 @@ class SalarioServiceTest {
     }
 
     @Test
+    void deveFiltrarSalariosDoMesInformado() {
+        Salario doMes = salarioComUsuarioEData(1L, 3000.0, LocalDate.of(2026, 7, 5));
+        Salario deOutroMes = salarioComUsuarioEData(1L, 500.0, LocalDate.of(2026, 6, 10));
+        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(doMes, deOutroMes));
+
+        List<SalarioDTO> resultado = salarioService.filtrarPorPeriodo(1L, 7, 2026);
+
+        assertEquals(1, resultado.size());
+        assertValorIgual(3000.0, resultado.get(0).getValor());
+    }
+
+    @Test
+    void filtrarPorPeriodoDeveRetornarVazioQuandoNenhumSalarioNoMes() {
+        Salario deOutroMes = salarioComUsuarioEData(1L, 500.0, LocalDate.of(2026, 6, 10));
+        when(salarioRepository.findByUsuarioId(1L)).thenReturn(List.of(deOutroMes));
+
+        List<SalarioDTO> resultado = salarioService.filtrarPorPeriodo(1L, 7, 2026);
+
+        assertTrue(resultado.isEmpty());
+    }
+
+    @Test
     void deveDeletarSalarioQuandoUsuarioEhODono() {
         Salario salario = salarioComUsuario(1L, 3000.0);
         when(salarioRepository.findById(5L)).thenReturn(Optional.of(salario));
@@ -147,11 +169,15 @@ class SalarioServiceTest {
     }
 
     private Salario salarioComUsuario(Long usuarioId, double valor) {
+        return salarioComUsuarioEData(usuarioId, valor, LocalDate.now());
+    }
+
+    private Salario salarioComUsuarioEData(Long usuarioId, double valor, LocalDate data) {
         Usuario usuario = new Usuario();
         usuario.setId(usuarioId);
         Salario salario = new Salario();
         salario.setValor(BigDecimal.valueOf(valor));
-        salario.setData(LocalDate.now());
+        salario.setData(data);
         salario.setUsuario(usuario);
         return salario;
     }

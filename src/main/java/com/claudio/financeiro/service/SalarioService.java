@@ -42,6 +42,14 @@ public class SalarioService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    // Mês/ano nulos = sem filtro (retorna tudo), mesmo padrão de GastoRepository.findByFiltros
+    public List<SalarioDTO> filtrarPorPeriodo(Long usuarioId, Integer mes, Integer ano) {
+        return salarioRepository.findByUsuarioId(usuarioId).stream()
+                .filter(s -> CalculoFinanceiroUtil.salariosNoPeriodo(s, mes, ano))
+                .map(this::toDTO)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     // Verifica ownership antes de deletar, para evitar IDOR (usuário apagando salário de outro)
     public void deletar(Long id, Long usuarioId) {
         buscarComOwnership(id, usuarioId);

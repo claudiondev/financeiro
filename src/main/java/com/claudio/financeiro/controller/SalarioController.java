@@ -32,6 +32,16 @@ public class SalarioController {
         return salarioService.listarPorUsuario(usuarioLogado.getId());
     }
 
+    @GetMapping("/filtrar")
+    public List<SalarioDTO> filtrar(
+            Authentication authentication,
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer ano
+    ) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        return salarioService.filtrarPorPeriodo(usuarioLogado.getId(), mes, ano);
+    }
+
     @PutMapping("/{id}")
     public SalarioDTO atualizar(@PathVariable Long id, @Valid @RequestBody CriarSalarioRequest request, Authentication authentication) {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
