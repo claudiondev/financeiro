@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Service
@@ -54,6 +56,29 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    /**
+     * Token vazado continuaria funcionando até expirar (até 24h) mesmo depois do usuário trocar
+     * a senha — sem uma blacklist real (que não sobreviveria a restart, mesma limitação do rate
+     * limiter), comparar contra a data da última troca de senha resolve sem precisar de estado
+     * extra: {@code senhaAlteradaEm} já é persistido no banco.
+     *
+     * Usa "não é depois de" (não "é antes de") de propósito: o claim `iat` do JWT é truncado pro
+     * segundo, então um login e uma troca de senha no mesmíssimo segundo podem empatar — nesse
+     * empate, é mais seguro tratar como revogado.
+     */
+    public boolean tokenRevogado(String token, LocalDateTime senhaAlteradaEm) {
+        if (senhaAlteradaEm == null) {
+            return false;
+        }
+        Date emitidoEm = Jwts.parser()
+                .verifyWith(chave)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getIssuedAt();
+        return !emitidoEm.toInstant().isAfter(senhaAlteradaEm.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public boolean validarToken(String token, String email) {

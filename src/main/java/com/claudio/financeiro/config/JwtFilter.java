@@ -1,5 +1,6 @@
 package com.claudio.financeiro.config;
 
+import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.service.JwtService;
 import com.claudio.financeiro.service.UsuarioService;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -42,6 +43,11 @@ public class JwtFilter extends OncePerRequestFilter {
             String email = jwtService.extrairEmail(token);
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 var userDetails = usuarioService.loadUserByUsername(email);
+                if (userDetails instanceof Usuario usuario && jwtService.tokenRevogado(token, usuario.getSenhaAlteradaEm())) {
+                    log.debug("Token revogado (emitido antes da última troca de senha) para {}", email);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }

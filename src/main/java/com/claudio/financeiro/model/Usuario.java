@@ -37,6 +37,11 @@ public class Usuario implements UserDetails {
     @JsonProperty(access = WRITE_ONLY)
     private LocalDateTime codigoRecuperacaoExpiracao;
 
+    // Null = nunca trocou a senha (nenhum token é revogado). Setado em AuthService.redefinirSenha —
+    // qualquer JWT emitido antes desse instante passa a ser rejeitado (ver JwtService.tokenRevogado).
+    @JsonProperty(access = WRITE_ONLY)
+    private LocalDateTime senhaAlteradaEm;
+
     public Long getId() {
         return id;
     }
@@ -83,6 +88,14 @@ public class Usuario implements UserDetails {
 
     public void setCodigoRecuperacaoExpiracao(LocalDateTime codigoRecuperacaoExpiracao) {
         this.codigoRecuperacaoExpiracao = codigoRecuperacaoExpiracao;
+    }
+
+    public LocalDateTime getSenhaAlteradaEm() {
+        return senhaAlteradaEm;
+    }
+
+    public void setSenhaAlteradaEm(LocalDateTime senhaAlteradaEm) {
+        this.senhaAlteradaEm = senhaAlteradaEm;
     }
 
     @Override

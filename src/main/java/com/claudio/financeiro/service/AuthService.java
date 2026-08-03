@@ -77,6 +77,7 @@ public class AuthService {
         }
 
         usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuario.setSenhaAlteradaEm(LocalDateTime.now());
         usuario.setCodigoRecuperacao(null);
         usuario.setCodigoRecuperacaoExpiracao(null);
         usuarioRepository.save(usuario);

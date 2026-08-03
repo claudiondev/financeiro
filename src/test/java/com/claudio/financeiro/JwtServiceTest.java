@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class JwtServiceTest {
@@ -78,6 +80,29 @@ class JwtServiceTest {
         Thread.sleep(20);
 
         assertFalse(jwtService.validarToken(token, "usuario@teste.com"));
+    }
+
+    @Test
+    void tokenRevogadoDeveRetornarFalseQuandoSenhaNuncaFoiTrocada() {
+        String token = jwtService.gerarToken("usuario@teste.com");
+
+        assertFalse(jwtService.tokenRevogado(token, null));
+    }
+
+    @Test
+    void tokenRevogadoDeveRetornarTrueQuandoEmitidoAntesDaTrocaDeSenha() {
+        String token = jwtService.gerarToken("usuario@teste.com");
+        LocalDateTime senhaTrocadaDepois = LocalDateTime.now().plusMinutes(1);
+
+        assertTrue(jwtService.tokenRevogado(token, senhaTrocadaDepois));
+    }
+
+    @Test
+    void tokenRevogadoDeveRetornarFalseQuandoEmitidoDepoisDaTrocaDeSenha() {
+        LocalDateTime senhaTrocadaAntes = LocalDateTime.now().minusMinutes(1);
+        String token = jwtService.gerarToken("usuario@teste.com");
+
+        assertFalse(jwtService.tokenRevogado(token, senhaTrocadaAntes));
     }
 
     @Test

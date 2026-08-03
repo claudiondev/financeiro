@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -97,6 +98,50 @@ class AuthServiceTest {
         );
 
         assertEquals(401, ex.getStatusCode().value());
+    }
+
+    @Test
+    void redefinirSenhaDeveAtualizarSenhaERegistrarMomentoDaTroca() {
+        Usuario usuario = usuario("claudio@teste.com", "hashAntigo");
+        usuario.setCodigoRecuperacao("123456");
+        usuario.setCodigoRecuperacaoExpiracao(LocalDateTime.now().plusMinutes(10));
+        when(usuarioRepository.findByCodigoRecuperacao("123456")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.encode("SenhaNova1")).thenReturn("hashNovo");
+
+        authService.redefinirSenha("123456", "SenhaNova1");
+
+        assertEquals("hashNovo", usuario.getSenha());
+        assertNotNull(usuario.getSenhaAlteradaEm());
+        assertNull(usuario.getCodigoRecuperacao());
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void deveLancarBadRequestParaCodigoDeRecuperacaoInexistente() {
+        when(usuarioRepository.findByCodigoRecuperacao("errado")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.redefinirSenha("errado", "SenhaNova1")
+        );
+
+        assertEquals(400, ex.getStatusCode().value());
+    }
+
+    @Test
+    void deveLancarBadRequestParaCodigoDeRecuperacaoExpirado() {
+        Usuario usuario = usuario("claudio@teste.com", "hashAntigo");
+        usuario.setCodigoRecuperacao("123456");
+        usuario.setCodigoRecuperacaoExpiracao(LocalDateTime.now().minusMinutes(1));
+        when(usuarioRepository.findByCodigoRecuperacao("123456")).thenReturn(Optional.of(usuario));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.redefinirSenha("123456", "SenhaNova1")
+        );
+
+        assertEquals(400, ex.getStatusCode().value());
+        verify(usuarioRepository, never()).save(any());
     }
 
     private Usuario usuario(String email, String senha) {

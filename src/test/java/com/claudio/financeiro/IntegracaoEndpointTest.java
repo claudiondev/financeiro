@@ -1,5 +1,6 @@
 package com.claudio.financeiro;
 
+import com.claudio.financeiro.repository.UsuarioRepository;
 import com.claudio.financeiro.service.RateLimiterService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ class IntegracaoEndpointTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     @MockBean
     private JavaMailSender mailSender;
@@ -86,6 +90,30 @@ class IntegracaoEndpointTest {
                         .content(objectMapper.writeValueAsString(
                                 Map.of("email", email, "senha", "semmaiuscula1"))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deveRevogarTokenAntigoAposRedefinirSenha() throws Exception {
+        String email = "revoga_" + System.nanoTime() + "@teste.com";
+        String tokenAntigo = registrarELogar(email, "SenhaAntiga1");
+
+        mockMvc.perform(get("/gastos").header("Authorization", "Bearer " + tokenAntigo))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/auth/recuperar-senha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("email", email))))
+                .andExpect(status().isOk());
+
+        String codigo = usuarioRepository.findByEmail(email).orElseThrow().getCodigoRecuperacao();
+
+        mockMvc.perform(post("/auth/redefinir-senha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("codigo", codigo, "novaSenha", "SenhaNova1"))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/gastos").header("Authorization", "Bearer " + tokenAntigo))
+                .andExpect(status().isForbidden());
     }
 
     @Test
