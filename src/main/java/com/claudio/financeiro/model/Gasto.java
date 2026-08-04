@@ -54,6 +54,10 @@ public class Gasto {
     private Integer numeroParcela;
     private Integer totalParcelas;
 
+    // ID único da transação no extrato bancário (OFX) — só preenchido em gastos importados.
+    // Garante que reimportar o mesmo período não duplica (ver ImportacaoService).
+    private String fitid;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
@@ -96,4 +100,7 @@ public class Gasto {
 
     public Integer getTotalParcelas() { return totalParcelas; }
     public void setTotalParcelas(Integer totalParcelas) { this.totalParcelas = totalParcelas; }
+
+    public String getFitid() { return fitid; }
+    public void setFitid(String fitid) { this.fitid = fitid; }
 }

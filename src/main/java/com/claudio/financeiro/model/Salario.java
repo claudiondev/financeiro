@@ -27,6 +27,9 @@ public class Salario {
     private BigDecimal adicional;
     private String descricao;
 
+    // ID único da transação no extrato bancário (OFX) — só preenchido em salários importados.
+    private String fitid;
+
     @NotNull
     private LocalDate data;
 
@@ -54,4 +57,7 @@ public class Salario {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getFitid() { return fitid; }
+    public void setFitid(String fitid) { this.fitid = fitid; }
 }

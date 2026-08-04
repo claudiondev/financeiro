@@ -18,4 +18,8 @@ public interface SalarioRepository extends JpaRepository<Salario, Long> {
            "GROUP BY YEAR(s.data), MONTH(s.data)")
     List<Object[]> somarRendaAgrupadaPorMes(@Param("usuarioId") Long usuarioId,
                                              @Param("desde") LocalDate desde);
+
+    // Mesma finalidade de GastoRepository.findFitidsExistentes: dedup em lote na importação de extrato.
+    @Query("SELECT s.fitid FROM Salario s WHERE s.usuario.id = :usuarioId AND s.fitid IN :fitids")
+    List<String> findFitidsExistentes(@Param("usuarioId") Long usuarioId, @Param("fitids") List<String> fitids);
 }

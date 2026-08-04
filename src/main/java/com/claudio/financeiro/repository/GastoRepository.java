@@ -54,4 +54,9 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
            "AND g.data >= :desde GROUP BY YEAR(g.data), MONTH(g.data)")
     List<Object[]> somarGastosPagosAgrupadoPorMes(@Param("usuarioId") Long usuarioId,
                                                    @Param("desde") LocalDate desde);
+
+    // Usado pela importação de extrato (ImportacaoService) pra saber, em lote, quais
+    // transações do arquivo já foram importadas antes — evita reimportar duplicata.
+    @Query("SELECT g.fitid FROM Gasto g WHERE g.usuario.id = :usuarioId AND g.fitid IN :fitids")
+    List<String> findFitidsExistentes(@Param("usuarioId") Long usuarioId, @Param("fitids") List<String> fitids);
 }
