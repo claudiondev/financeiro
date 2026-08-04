@@ -58,6 +58,12 @@ public class Gasto {
     // Garante que reimportar o mesmo período não duplica (ver ImportacaoService).
     private String fitid;
 
+    // Preenchido quando esse gasto é um aporte pra uma meta de economia (categoria Poupança).
+    // ON DELETE SET NULL: apagar a meta não apaga o histórico de gastos, só desvincula.
+    @ManyToOne
+    @JoinColumn(name = "meta_economia_id")
+    private MetaEconomia metaEconomia;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
@@ -103,4 +109,7 @@ public class Gasto {
 
     public String getFitid() { return fitid; }
     public void setFitid(String fitid) { this.fitid = fitid; }
+
+    public MetaEconomia getMetaEconomia() { return metaEconomia; }
+    public void setMetaEconomia(MetaEconomia metaEconomia) { this.metaEconomia = metaEconomia; }
 }

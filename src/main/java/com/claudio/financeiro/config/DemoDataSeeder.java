@@ -4,11 +4,13 @@ import com.claudio.financeiro.model.CategoriaGasto;
 import com.claudio.financeiro.model.FormaPagamento;
 import com.claudio.financeiro.model.Gasto;
 import com.claudio.financeiro.model.GastoFixo;
+import com.claudio.financeiro.model.MetaEconomia;
 import com.claudio.financeiro.model.Orcamento;
 import com.claudio.financeiro.model.Salario;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.GastoFixoRepository;
 import com.claudio.financeiro.repository.GastoRepository;
+import com.claudio.financeiro.repository.MetaEconomiaRepository;
 import com.claudio.financeiro.repository.OrcamentoRepository;
 import com.claudio.financeiro.repository.SalarioRepository;
 import com.claudio.financeiro.repository.UsuarioRepository;
@@ -43,16 +45,19 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final SalarioRepository salarioRepository;
     private final OrcamentoRepository orcamentoRepository;
     private final GastoFixoRepository gastoFixoRepository;
+    private final MetaEconomiaRepository metaEconomiaRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UsuarioRepository usuarioRepository, GastoRepository gastoRepository,
                           SalarioRepository salarioRepository, OrcamentoRepository orcamentoRepository,
-                          GastoFixoRepository gastoFixoRepository, PasswordEncoder passwordEncoder) {
+                          GastoFixoRepository gastoFixoRepository, MetaEconomiaRepository metaEconomiaRepository,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.gastoRepository = gastoRepository;
         this.salarioRepository = salarioRepository;
         this.orcamentoRepository = orcamentoRepository;
         this.gastoFixoRepository = gastoFixoRepository;
+        this.metaEconomiaRepository = metaEconomiaRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -76,6 +81,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         popularParcelamento(demo, mesAtual);
         popularOrcamentos(demo);
         popularContasFixas(demo, mesAtual);
+        popularMetasEconomia(demo, mesAtual);
 
         log.info("Conta demo criada com dados de exemplo ({})", EMAIL_DEMO);
     }
@@ -162,6 +168,40 @@ public class DemoDataSeeder implements ApplicationRunner {
         // mostra os dois estados mais relevantes da tela de Contas Fixas de cara.
         gastoDeContaFixa(aluguel, mesAtual.atDay(diaAluguel), false);
         gastoDeContaFixa(internet, mesAtual.atDay(diaInternet), true);
+    }
+
+    private void popularMetasEconomia(Usuario demo, YearMonth mesAtual) {
+        // Em andamento: 40% do alvo, prazo no futuro — mostra barra de progresso normal.
+        MetaEconomia viagem = metaEconomia(demo, "Viagem para a praia", "3000.00", mesAtual.plusMonths(4).atEndOfMonth());
+        aporte(demo, viagem, mesAtual.minusMonths(2).atDay(5), "500.00");
+        aporte(demo, viagem, mesAtual.minusMonths(1).atDay(5), "400.00");
+        aporte(demo, viagem, mesAtual.atDay(5), "300.00");
+
+        // Concluída: aportes somam mais que o alvo, sem prazo — mostra status "Concluída".
+        MetaEconomia reserva = metaEconomia(demo, "Reserva de emergência", "2000.00", null);
+        aporte(demo, reserva, mesAtual.minusMonths(3).atDay(10), "1000.00");
+        aporte(demo, reserva, mesAtual.minusMonths(1).atDay(10), "1000.00");
+    }
+
+    private MetaEconomia metaEconomia(Usuario usuario, String nome, String valorAlvo, LocalDate prazo) {
+        MetaEconomia meta = new MetaEconomia();
+        meta.setUsuario(usuario);
+        meta.setNome(nome);
+        meta.setValorAlvo(new BigDecimal(valorAlvo));
+        meta.setPrazo(prazo);
+        return metaEconomiaRepository.save(meta);
+    }
+
+    private void aporte(Usuario usuario, MetaEconomia meta, LocalDate data, String valor) {
+        Gasto gasto = new Gasto();
+        gasto.setUsuario(usuario);
+        gasto.setDescricao("Aporte: " + meta.getNome());
+        gasto.setValor(new BigDecimal(valor));
+        gasto.setCategoria(CategoriaGasto.POUPANCA);
+        gasto.setData(data);
+        gasto.setMetaEconomia(meta);
+        gasto.setPago(true);
+        gastoRepository.save(gasto);
     }
 
     private void gasto(Usuario usuario, LocalDate data, CategoriaGasto categoria, String descricao,

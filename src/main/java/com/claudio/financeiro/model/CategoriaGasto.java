@@ -12,6 +12,7 @@ public enum CategoriaGasto {
     LAZER("Lazer"),
     SAUDE("Saúde"),
     EDUCACAO("Educação"),
+    POUPANCA("Poupança"),
     OUTROS("Outros");
 
     private final String descricao;

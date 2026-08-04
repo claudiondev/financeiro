@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -59,4 +60,8 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
     // transações do arquivo já foram importadas antes — evita reimportar duplicata.
     @Query("SELECT g.fitid FROM Gasto g WHERE g.usuario.id = :usuarioId AND g.fitid IN :fitids")
     List<String> findFitidsExistentes(@Param("usuarioId") Long usuarioId, @Param("fitids") List<String> fitids);
+
+    // Progresso de uma meta de economia — soma ao vivo, nunca armazenada (ver MetaEconomiaService).
+    @Query("SELECT COALESCE(SUM(g.valor), 0) FROM Gasto g WHERE g.metaEconomia.id = :metaEconomiaId")
+    BigDecimal somarValorPorMetaEconomia(@Param("metaEconomiaId") Long metaEconomiaId);
 }

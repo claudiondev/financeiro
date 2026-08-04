@@ -152,6 +152,7 @@ public class GastoService {
         dto.setFormaPagamento(gasto.getFormaPagamento());
         dto.setNumeroParcela(gasto.getNumeroParcela());
         dto.setTotalParcelas(gasto.getTotalParcelas());
+        dto.setMetaEconomiaId(gasto.getMetaEconomia() != null ? gasto.getMetaEconomia().getId() : null);
         return dto;
     }
 

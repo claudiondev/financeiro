@@ -29,4 +29,7 @@ public class GastoDTO {
     /** Preenchidos só em gasto parcelado — permitem exibir "2/5" na listagem. */
     private Integer numeroParcela;
     private Integer totalParcelas;
+
+    /** Id da meta de economia, se esse gasto é um aporte; null se não for. */
+    private Long metaEconomiaId;
 }
