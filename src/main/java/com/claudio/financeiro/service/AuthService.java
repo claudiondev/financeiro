@@ -1,5 +1,6 @@
 package com.claudio.financeiro.service;
 
+import com.claudio.financeiro.config.DemoDataSeeder;
 import com.claudio.financeiro.model.Usuario;
 import com.claudio.financeiro.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,14 @@ public class AuthService {
         }
 
         return jwtService.gerarToken(encontrado.getEmail());
+    }
+
+    // Sem senha: qualquer visitante pode entrar na conta demo pra avaliar o app. A escrita
+    // fica bloqueada pelo DemoReadOnlyInterceptor, então não há risco em pular a checagem aqui.
+    public String loginDemo() {
+        Usuario demo = usuarioRepository.findByEmail(DemoDataSeeder.EMAIL_DEMO)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Conta demo indisponível no momento"));
+        return jwtService.gerarToken(demo.getEmail());
     }
 
     public void recuperarSenha(String email) {

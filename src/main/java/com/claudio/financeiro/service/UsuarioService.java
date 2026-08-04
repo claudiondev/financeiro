@@ -42,6 +42,6 @@ public class UsuarioService implements UserDetailsService {
     }
 
     private UsuarioDTO toDTO(Usuario usuario) {
-        return new UsuarioDTO(usuario.getNome(), usuario.getEmail());
+        return new UsuarioDTO(usuario.getNome(), usuario.getEmail(), usuario.isDemo());
     }
 }

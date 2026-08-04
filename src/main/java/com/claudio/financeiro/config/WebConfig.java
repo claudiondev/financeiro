@@ -8,9 +8,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final DemoReadOnlyInterceptor demoReadOnlyInterceptor;
 
-    public WebConfig(RateLimitInterceptor rateLimitInterceptor) {
+    public WebConfig(RateLimitInterceptor rateLimitInterceptor, DemoReadOnlyInterceptor demoReadOnlyInterceptor) {
         this.rateLimitInterceptor = rateLimitInterceptor;
+        this.demoReadOnlyInterceptor = demoReadOnlyInterceptor;
     }
 
     @Override
@@ -20,5 +22,11 @@ public class WebConfig implements WebMvcConfigurer {
         // exige um código válido — sem ele, uma tentativa em loop não serve de nada.
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/auth/login", "/auth/recuperar-senha");
+
+        // /auth/** fica de fora: é onde o próprio /auth/demo vive, e nenhum outro endpoint
+        // de auth muda dado do usuário demo (login/registro/recuperação são de outra conta).
+        registry.addInterceptor(demoReadOnlyInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/auth/**");
     }
 }

@@ -27,7 +27,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         if (rateLimiterService.excedeuLimite(identificador)) {
             response.setStatus(429);
-            response.setContentType("application/json");
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(
                 "{\"erro\": \"Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.\"}"
             );

@@ -31,6 +31,12 @@ public class AuthController {
         return ResponseEntity.ok(token);
     }
 
+    @PostMapping("/demo")
+    public ResponseEntity<String> loginDemo() {
+        String token = authService.loginDemo();
+        return ResponseEntity.ok(token);
+    }
+
     @PostMapping("/recuperar-senha")
     public ResponseEntity<String> recuperarSenha(@Valid @RequestBody EmailRequest request) {
         authService.recuperarSenha(request.getEmail());

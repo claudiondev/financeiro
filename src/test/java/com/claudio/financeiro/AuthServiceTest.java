@@ -129,6 +129,26 @@ class AuthServiceTest {
     }
 
     @Test
+    void deveRetornarTokenNoLoginDemoQuandoContaDemoExiste() {
+        Usuario demo = usuario("demo@meufinanceiro.app", "hashQualquer");
+        when(usuarioRepository.findByEmail("demo@meufinanceiro.app")).thenReturn(Optional.of(demo));
+        when(jwtService.gerarToken("demo@meufinanceiro.app")).thenReturn("jwt.token.demo");
+
+        String token = authService.loginDemo();
+
+        assertEquals("jwt.token.demo", token);
+    }
+
+    @Test
+    void deveLancar503QuandoContaDemoNaoExiste() {
+        when(usuarioRepository.findByEmail("demo@meufinanceiro.app")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> authService.loginDemo());
+
+        assertEquals(503, ex.getStatusCode().value());
+    }
+
+    @Test
     void deveLancarBadRequestParaCodigoDeRecuperacaoExpirado() {
         Usuario usuario = usuario("claudio@teste.com", "hashAntigo");
         usuario.setCodigoRecuperacao("123456");

@@ -42,6 +42,10 @@ public class Usuario implements UserDetails {
     @JsonProperty(access = WRITE_ONLY)
     private LocalDateTime senhaAlteradaEm;
 
+    // Conta compartilhada de demonstração (ver DemoDataSeeder) — DemoReadOnlyInterceptor
+    // bloqueia qualquer escrita vinda desse usuário, pra não sujar os dados de exemplo.
+    private boolean demo = false;
+
     public Long getId() {
         return id;
     }
@@ -96,6 +100,14 @@ public class Usuario implements UserDetails {
 
     public void setSenhaAlteradaEm(LocalDateTime senhaAlteradaEm) {
         this.senhaAlteradaEm = senhaAlteradaEm;
+    }
+
+    public boolean isDemo() {
+        return demo;
+    }
+
+    public void setDemo(boolean demo) {
+        this.demo = demo;
     }
 
     @Override
