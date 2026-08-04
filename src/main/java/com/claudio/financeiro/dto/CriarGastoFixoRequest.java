@@ -36,4 +36,9 @@ public class CriarGastoFixoRequest {
 
     @NotNull
     private LocalDate dataInicio;
+
+    // Opcional: null = conta fixa recorrente pra sempre (aluguel, assinatura). Preenchido =
+    // dívida/financiamento com fim — a geração automática para sozinha ao atingir esse total.
+    @Min(1)
+    private Integer totalParcelas;
 }

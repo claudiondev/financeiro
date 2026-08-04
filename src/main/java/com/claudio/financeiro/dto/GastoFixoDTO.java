@@ -23,6 +23,12 @@ public class GastoFixoDTO {
     private LocalDate dataInicio;
     private boolean ativo;
 
+    // Null = conta fixa recorrente pra sempre. Preenchido = dívida/financiamento com fim —
+    // parcelasPagas conta quantas já foram efetivamente pagas (não só cobradas), pra formar
+    // "16/48" e o saldo devedor sem mentir enquanto a parcela do mês ainda está em aberto.
+    private Integer totalParcelas;
+    private Long parcelasPagas;
+
     private StatusGastoFixo statusMesAtual;
     private LocalDate dataVencimentoMesAtual;
 

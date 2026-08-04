@@ -40,6 +40,11 @@ public class GastoFixo {
 
     private boolean ativo = true;
 
+    // Null = recorrente pra sempre (aluguel, assinatura — comportamento original). Preenchido
+    // = tem fim (financiamento/dívida): a geração automática para sozinha ao atingir esse
+    // número de parcelas já criadas (ver GastoFixoService.garantirGastosDoMesGerados).
+    private Integer totalParcelas;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
@@ -64,6 +69,9 @@ public class GastoFixo {
 
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
+
+    public Integer getTotalParcelas() { return totalParcelas; }
+    public void setTotalParcelas(Integer totalParcelas) { this.totalParcelas = totalParcelas; }
 
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }

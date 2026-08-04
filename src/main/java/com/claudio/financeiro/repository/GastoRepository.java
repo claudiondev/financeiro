@@ -34,6 +34,17 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
     // determinístico sobre qual dos dois "vence" ao exibir o status.
     List<Gasto> findByGastoFixoIdAndDataBetweenOrderByIdAsc(Long gastoFixoId, LocalDate inicio, LocalDate fim);
 
+    // Total de parcelas já geradas pra um gasto fixo com fim definido (dívida/financiamento) —
+    // usado só pra parar a geração automática ao atingir GastoFixo.totalParcelas. Não é o
+    // mesmo número exibido na tela (ver countByGastoFixoIdAndPagoTrue): "gerada" é só a
+    // cobrança do mês ter sido criada, não que já foi paga.
+    long countByGastoFixoId(Long gastoFixoId);
+
+    // Parcelas efetivamente pagas — usado pra exibir "16/48 parcelas" e o saldo devedor.
+    // Diferente de countByGastoFixoId: se o usuário atrasar um pagamento, a parcela do mês
+    // já foi "gerada" mas ainda não deve contar como paga no progresso da dívida.
+    long countByGastoFixoIdAndPagoTrue(Long gastoFixoId);
+
     List<Gasto> findByUsuarioIdAndGrupoParcelamentoIsNotNull(Long usuarioId);
 
     List<Gasto> findByUsuarioIdAndGrupoParcelamento(Long usuarioId, String grupoParcelamento);

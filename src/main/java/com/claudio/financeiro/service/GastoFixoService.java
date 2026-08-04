@@ -61,6 +61,7 @@ public class GastoFixoService {
         fixo.setDescricao(request.getDescricao());
         fixo.setDiaVencimento(request.getDiaVencimento());
         fixo.setDataInicio(request.getDataInicio());
+        fixo.setTotalParcelas(request.getTotalParcelas());
         return toDTOComStatus(gastoFixoRepository.save(fixo), LocalDate.now());
     }
 
@@ -117,6 +118,10 @@ public class GastoFixoService {
         for (GastoFixo fixo : gastoFixoRepository.findByUsuarioIdAndAtivoTrue(usuarioId)) {
             if (fixo.getDataInicio().isAfter(referencia.atEndOfMonth())) {
                 continue; // ainda não começou a valer nesse mês
+            }
+
+            if (fixo.getTotalParcelas() != null && gastoRepository.countByGastoFixoId(fixo.getId()) >= fixo.getTotalParcelas()) {
+                continue; // dívida/financiamento já quitado — não gera mais parcela
             }
 
             LocalDate inicioDoMes = referencia.atDay(1);
@@ -206,6 +211,8 @@ public class GastoFixoService {
                 fixo.getDiaVencimento(),
                 fixo.getDataInicio(),
                 fixo.isAtivo(),
+                fixo.getTotalParcelas(),
+                gastoRepository.countByGastoFixoIdAndPagoTrue(fixo.getId()),
                 status,
                 dataVencimento,
                 gastoDoMesId
@@ -232,6 +239,7 @@ public class GastoFixoService {
         fixo.setDescricao(request.getDescricao());
         fixo.setDiaVencimento(request.getDiaVencimento());
         fixo.setDataInicio(request.getDataInicio());
+        fixo.setTotalParcelas(request.getTotalParcelas());
         fixo.setUsuario(usuarioLogado);
         return fixo;
     }

@@ -115,6 +115,79 @@ class GastoFixoServiceTest {
     }
 
     @Test
+    void naoDeveGerarQuandoTotalParcelasJaFoiAtingido() {
+        GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
+        fixo.setTotalParcelas(3);
+        YearMonth mesAtual = YearMonth.now();
+
+        when(gastoFixoRepository.findByUsuarioIdAndAtivoTrue(1L)).thenReturn(List.of(fixo));
+        when(gastoRepository.countByGastoFixoId(10L)).thenReturn(3L);
+
+        gastoFixoService.garantirGastosDoMesGerados(1L, mesAtual.getMonthValue(), mesAtual.getYear());
+
+        verify(gastoRepository, never()).existsByGastoFixoIdAndDataBetween(any(), any(), any());
+        verify(gastoRepository, never()).save(any());
+    }
+
+    @Test
+    void deveContinuarGerandoQuandoAindaNaoAtingiuTotalParcelas() {
+        GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
+        fixo.setTotalParcelas(48);
+        YearMonth mesAtual = YearMonth.now();
+
+        when(gastoFixoRepository.findByUsuarioIdAndAtivoTrue(1L)).thenReturn(List.of(fixo));
+        when(gastoRepository.countByGastoFixoId(10L)).thenReturn(10L);
+        when(gastoRepository.existsByGastoFixoIdAndDataBetween(10L, mesAtual.atDay(1), mesAtual.atEndOfMonth()))
+                .thenReturn(false);
+        when(gastoRepository.save(any(Gasto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        gastoFixoService.garantirGastosDoMesGerados(1L, mesAtual.getMonthValue(), mesAtual.getYear());
+
+        verify(gastoRepository).save(any(Gasto.class));
+    }
+
+    @Test
+    void deveExporParcelasPagasEoTotalNoDTO() {
+        when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> {
+            GastoFixo salvo = inv.getArgument(0);
+            salvo.setId(10L);
+            return salvo;
+        });
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
+        when(gastoRepository.countByGastoFixoIdAndPagoTrue(10L)).thenReturn(16L);
+
+        GastoFixoDTO resultado = gastoFixoService.criar(
+                new CriarGastoFixoRequest(CategoriaGasto.MORADIA, BigDecimal.valueOf(500.0), "Financiamento", 5, LocalDate.now().minusMonths(1), 48),
+                usuarioComId(1L)
+        );
+
+        assertEquals(48, resultado.getTotalParcelas());
+        assertEquals(16L, resultado.getParcelasPagas());
+    }
+
+    // Cenário real de descompasso: geradas (contam pra parar a cobrança) e pagas (contam pro
+    // progresso exibido) podem divergir se o usuário atrasar — o saldo devedor não pode
+    // mostrar "quitado" enquanto a parcela do mês ainda está pendente.
+    @Test
+    void naoDeveContarParcelaGeradaMasNaoPagaComoProgresso() {
+        when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> {
+            GastoFixo salvo = inv.getArgument(0);
+            salvo.setId(10L);
+            return salvo;
+        });
+        when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
+        when(gastoRepository.countByGastoFixoIdAndPagoTrue(10L)).thenReturn(4L);
+
+        GastoFixoDTO resultado = gastoFixoService.criar(
+                new CriarGastoFixoRequest(CategoriaGasto.MORADIA, BigDecimal.valueOf(500.0), "Financiamento", 5, LocalDate.now().minusMonths(1), 5),
+                usuarioComId(1L)
+        );
+
+        assertEquals(4L, resultado.getParcelasPagas());
+        assertNotEquals(resultado.getTotalParcelas().longValue(), resultado.getParcelasPagas());
+    }
+
+    @Test
     void deveAjustarDiaDeVencimentoQuandoMesForMaisCurto() {
         GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 31);
         fixo.setDataInicio(LocalDate.of(2025, 1, 1));
@@ -136,7 +209,7 @@ class GastoFixoServiceTest {
     void deveCriarGastoFixoAPartirDoRequest() {
         Usuario usuario = usuarioComId(1L);
         CriarGastoFixoRequest request = new CriarGastoFixoRequest(
-                CategoriaGasto.MORADIA, BigDecimal.valueOf(1200.0), "Aluguel", 10, LocalDate.now().minusMonths(1)
+                CategoriaGasto.MORADIA, BigDecimal.valueOf(1200.0), "Aluguel", 10, LocalDate.now().minusMonths(1), null
         );
         when(gastoFixoRepository.save(any(GastoFixo.class))).thenAnswer(inv -> {
             GastoFixo salvo = inv.getArgument(0);
@@ -160,7 +233,7 @@ class GastoFixoServiceTest {
         when(gastoRepository.findByGastoFixoIdAndDataBetweenOrderByIdAsc(eq(10L), any(), any())).thenReturn(List.of());
 
         CriarGastoFixoRequest request = new CriarGastoFixoRequest(
-                CategoriaGasto.LAZER, BigDecimal.valueOf(60.0), "Streaming", 15, LocalDate.now().minusMonths(2)
+                CategoriaGasto.LAZER, BigDecimal.valueOf(60.0), "Streaming", 15, LocalDate.now().minusMonths(2), null
         );
         GastoFixoDTO resultado = gastoFixoService.atualizar(10L, request, 1L);
 
@@ -173,7 +246,7 @@ class GastoFixoServiceTest {
     void deveLancarForbiddenAoAtualizarGastoFixoDeOutroUsuario() {
         GastoFixo fixo = fixoComId(10L, usuarioComId(1L), 5);
         when(gastoFixoRepository.findById(10L)).thenReturn(Optional.of(fixo));
-        CriarGastoFixoRequest request = new CriarGastoFixoRequest(CategoriaGasto.OUTROS, BigDecimal.TEN, "X", 1, LocalDate.now());
+        CriarGastoFixoRequest request = new CriarGastoFixoRequest(CategoriaGasto.OUTROS, BigDecimal.TEN, "X", 1, LocalDate.now(), null);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
