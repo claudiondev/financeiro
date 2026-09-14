@@ -9,7 +9,7 @@
 ![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0200?style=for-the-badge&logo=flyway)
 ![Render](https://img.shields.io/badge/Render-Deploy-46E3B7?style=for-the-badge&logo=render)
 
-> API REST completa para controle financeiro pessoal: autenticação JWT, orçamentos por categoria, contas recorrentes, parcelamento no cartão, um assistente financeiro baseado em regras e 119 testes automatizados.
+> API REST completa para controle financeiro pessoal: autenticação JWT, orçamentos por categoria, contas recorrentes e financiamentos, parcelamento no cartão, importação de extrato bancário (OFX), metas de economia, um assistente financeiro baseado em regras e 141 testes automatizados.
 
 ---
 
@@ -39,13 +39,15 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 - 💰 **Gastos** — CRUD completo com categoria fixa (enum), forma de pagamento e parcelamento no cartão de crédito (divide o valor automaticamente, sem perder centavo no arredondamento)
 - 💼 **Salários** — CRUD com valor, comissão e adicional, filtrável por mês
 - 🎯 **Metas de orçamento** — limite mensal por categoria, com cálculo automático de consumo e status (dentro do limite / atenção / estourado)
-- 🔁 **Contas fixas recorrentes** — gera o gasto do mês automaticamente, status (pago / vencendo / atrasado / pendente), pausar/reativar sem perder o histórico, lembrete por e-mail opcional
+- 🔁 **Contas fixas recorrentes e financiamentos** — gera o gasto do mês automaticamente, status (pago / vencendo / atrasado / pendente), pausar/reativar sem perder o histórico, lembrete por e-mail opcional; com número de parcelas definido vira um financiamento (para de gerar sozinho ao chegar no total, saldo devedor calculado ao vivo)
+- 🎯 **Metas de economia (poupança)** — meta de valor-alvo com prazo opcional; "registrar aporte" cria um gasto na categoria Poupança, progresso sempre calculado ao vivo (nunca armazenado), status EM_ANDAMENTO/CONCLUÍDA/ATRASADA
+- 📥 **Importação de extrato bancário (OFX)** — parser próprio (sem lib externa) para OFX 1.x/2.x, fluxo em 2 passos com revisão de categoria antes de confirmar, dedup por FITID (evita duplicar transação já importada)
 - 🤖 **Assistente financeiro** — motor de regras (não depende de LLM) que cruza orçamentos, ritmo de gastos, variação por categoria e dicas educacionais em insights priorizados por severidade
 - 📈 **Evolução mensal** — série histórica de entradas, saídas e saldo
 - 📊 **Resumo e relatório** — saldo do mês, gasto por categoria, transações recentes
-- 🛡️ **Segurança em produção** — rate limiting no login/recuperação, headers HSTS/CSP/X-Frame-Options, proteção contra IDOR (todo endpoint filtra por dono do recurso), senha com BCrypt
-- 🗄️ **13 migrações versionadas** com Flyway (schema evoluído incrementalmente, sem `ddl-auto=update`)
-- ✅ **119 testes automatizados** — JUnit 5 + Mockito nos services, testes de integração ponta a ponta com MockMvc
+- 🛡️ **Segurança em produção** — rate limiting no login/recuperação, headers HSTS/CSP/X-Frame-Options, proteção contra IDOR (todo endpoint filtra por dono do recurso), senha com BCrypt, revogação de token ao trocar senha
+- 🗄️ **15 migrações versionadas** com Flyway (schema evoluído incrementalmente, sem `ddl-auto=update`)
+- ✅ **141 testes automatizados** — JUnit 5 + Mockito nos services, testes de integração ponta a ponta com MockMvc
 
 ---
 
@@ -79,10 +81,18 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 - `GET /orcamentos` → Lista com consumo do mês corrente
 - `DELETE /orcamentos/{id}`
 
-### 🔁 Contas Fixas (`/gastos-fixos`)
-- `POST /gastos-fixos` · `GET /gastos-fixos` · `PUT /gastos-fixos/{id}` · `DELETE /gastos-fixos/{id}`
+### 🔁 Contas Fixas e Financiamentos (`/gastos-fixos`)
+- `POST /gastos-fixos` → Cria (com `totalParcelas` opcional vira financiamento) · `GET /gastos-fixos` · `PUT /gastos-fixos/{id}` · `DELETE /gastos-fixos/{id}`
 - `PATCH /gastos-fixos/{id}/pausar` · `/reativar`
 - `GET /gastos-fixos/pendentes-alerta`
+
+### 🎯 Metas de Economia (`/metas-economia`)
+- `POST /metas-economia` · `GET /metas-economia` · `PUT /metas-economia/{id}` · `DELETE /metas-economia/{id}`
+- `POST /metas-economia/{id}/aportes` → Registra aporte (cria um gasto na categoria Poupança vinculado à meta)
+
+### 📥 Importação de Extrato (`/importacao`)
+- `POST /importacao/ofx` → Lê o arquivo OFX e devolve a lista de transações para revisão (nada é salvo ainda)
+- `POST /importacao/confirmar` → Recebe os itens revisados/marcados e cria os `Gasto`/`Salario` de fato
 
 ### 🤖 Assistente (`/assistente`)
 - `GET /assistente/insights` → Top 5 insights do mês, por severidade
@@ -95,7 +105,7 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 ./mvnw test
 ```
 
-119 testes: services isolados com Mockito, e um conjunto de integração (`IntegracaoEndpointTest`) que sobe o contexto Spring completo (H2 + Security + JWT) para validar autenticação, autorização e IDOR ponta a ponta.
+141 testes: services isolados com Mockito, parser de OFX (`OfxParserTest`) e um conjunto de integração (`IntegracaoEndpointTest`) que sobe o contexto Spring completo (H2 + Security + JWT) para validar autenticação, autorização e IDOR ponta a ponta.
 
 ---
 
@@ -111,7 +121,7 @@ src/main/java/com/claudio/financeiro
 ├── exception    # GlobalExceptionHandler — erros padronizados em {"erro": "..."}
 └── config       # Segurança (JWT, Spring Security), rate limiting, seed do modo demo
 
-src/main/resources/db/migration   # Migrações Flyway (V2 a V13)
+src/main/resources/db/migration   # Migrações Flyway (V2 a V16)
 ```
 
 ---
@@ -125,6 +135,8 @@ Camadas clássicas (`Controller → Service → Repository`), com alguns pontos 
 - **`GlobalExceptionHandler`** centraliza erros de validação, ownership (403/404) e JSON inválido num formato único
 - **Assistente financeiro atrás de uma interface** (`GeradorDeInsight`) — hoje é um motor de regras determinístico, mas o design já comporta uma implementação com LLM no futuro sem tocar no controller
 - **Valores monetários em `BigDecimal`**, nunca `Double` — evita erro de arredondamento em soma/parcelamento
+- **Progresso derivado, nunca armazenado** — parcelas pagas de um financiamento e valor acumulado de uma meta de economia são sempre a soma ao vivo dos registros vinculados, não um contador salvo que pode dessincronizar
+- **`OfxParser` sem dependência externa** — parser próprio via regex, tolerante ao OFX 1.x (SGML solto, tags sem fechamento) que a maioria dos bancos brasileiros exporta, além do XML fechado do OFX 2.x
 - **Migrações Flyway incrementais**, com estratégia *expand-and-contract* nas mudanças que trocam o tipo de uma coluna existente
 
 ---
