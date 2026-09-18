@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -29,13 +30,15 @@ public class AssistenteIaConfig {
         OpenAiApi api = OpenAiApi.builder().apiKey(chave)
                 .restClientBuilder(RestClient.builder().requestFactory(requestFactory)).build();
         OpenAiChatOptions options = OpenAiChatOptions.builder().model(modelo)
-                .maxCompletionTokens(800).reasoningEffort("low").store(false)
+                .maxCompletionTokens(800).reasoningEffort("none").store(false)
                 .parallelToolCalls(false).build();
         // Propaga o limite de ferramentas ao serviço em vez de devolvê-lo ao modelo,
         // evitando que ele tente novamente e gere chamadas adicionais cobradas.
         ToolCallingManager ferramentas = ToolCallingManager.builder()
                 .toolExecutionExceptionProcessor(new DefaultToolExecutionExceptionProcessor(true)).build();
+        // Sem repetição automática: a quota representa uma tentativa e o usuário decide se tenta de novo.
         return ChatClient.builder(OpenAiChatModel.builder().openAiApi(api)
-                .defaultOptions(options).toolCallingManager(ferramentas).build()).build();
+                .defaultOptions(options).toolCallingManager(ferramentas)
+                .retryTemplate(RetryTemplate.builder().maxAttempts(1).build()).build()).build();
     }
 }

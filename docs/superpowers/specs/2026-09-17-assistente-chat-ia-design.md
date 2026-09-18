@@ -22,7 +22,7 @@ O saldo é a diferença entre entradas e saídas registradas, não o saldo banc�
 
 Conversas ficam em memória por até 30 minutos sem atividade, com até dez mensagens no contexto. Cada sessão tem segredo aleatório próprio; visitantes da conta demo não compartilham o histórico. Reenvio com o mesmo UUID durante a sessão devolve a resposta anterior. Não há persistência de conversas.
 
-A quota diária fica no banco (`V17`): 30 perguntas compartilhadas na demo, 20 por conta normal e 50 globais. A atualização SQL do contador é atômica. Cada sessão aceita até cinco perguntas por minuto, e no máximo três chamadas de ferramentas por pergunta. O modelo tem limite de 800 tokens de saída por chamada e timeout de leitura de 45 segundos. A quota é reservada antes da chamada externa, inclusive quando o provedor falha.
+A quota diária fica no banco (`V17`): 30 perguntas compartilhadas na demo, 20 por conta normal e 50 globais. A atualização SQL do contador é atômica. Cada sessão aceita até cinco perguntas por minuto, e no máximo três chamadas de ferramentas por pergunta. O modelo tem limite de 800 tokens de saída por chamada e timeout de leitura de 45 segundos, sem repetição automática. A quota é reservada antes da chamada externa, inclusive quando o provedor falha.
 
 Sem chave ou com a funcionalidade desabilitada, os insights continuam disponíveis. Falhas do provedor retornam mensagem genérica ao cliente; prompts e respostas não são registrados em log.
 
