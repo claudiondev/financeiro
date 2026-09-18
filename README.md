@@ -168,9 +168,18 @@ cp .env.example .env
 # Preencha DB_USERNAME, DB_PASSWORD, JWT_SECRET (32+ caracteres) e, se quiser
 # testar recuperação de senha/lembretes, MAIL_USERNAME/MAIL_PASSWORD
 
+# Exporte as variáveis do .env para o processo do Maven
+set -a
+source .env
+set +a
+
 # Rode com o profile de desenvolvimento
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
+
+No IntelliJ, mantenha o profile `dev` e adicione `DB_USERNAME`, `DB_PASSWORD` e
+`JWT_SECRET` da sua `.env` em **Run > Edit Configurations > Environment variables**.
+O arquivo `.env` sozinho não é carregado automaticamente pela IDE.
 
 A API sobe em `http://localhost:8080`. No primeiro boot, o Flyway aplica as migrações e uma conta demo com dados de exemplo é criada automaticamente (`demo@meufinanceiro.app`, sem senha — use `POST /auth/demo`).
 
