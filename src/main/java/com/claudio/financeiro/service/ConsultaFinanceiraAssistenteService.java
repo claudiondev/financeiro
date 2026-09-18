@@ -53,7 +53,7 @@ public class ConsultaFinanceiraAssistenteService {
         List<Map<String, Object>> maiores = gastos.stream()
                 .sorted(Comparator.comparing(Gasto::getValor).reversed().thenComparing(Gasto::getData))
                 .limit(20)
-                .map(g -> Map.<String, Object>of("descricao", g.getDescricao(), "valor", g.getValor(),
+                .map(g -> Map.<String, Object>of("descricao", descricaoCurta(g.getDescricao()), "valor", g.getValor(),
                         "data", g.getData(), "categoria", g.getCategoria().name()))
                 .toList();
         Map<String, Object> resposta = new LinkedHashMap<>();
@@ -102,5 +102,11 @@ public class ConsultaFinanceiraAssistenteService {
 
     private BigDecimal valor(BigDecimal valor) {
         return valor == null ? BigDecimal.ZERO : valor;
+    }
+
+    private String descricaoCurta(String descricao) {
+        // Uma descrição pode conter texto importado de OFX; o total permanece exato,
+        // mas um lançamento não deve consumir sozinho o contexto nem expor texto excessivo.
+        return descricao.length() > 80 ? descricao.substring(0, 80) + "…" : descricao;
     }
 }

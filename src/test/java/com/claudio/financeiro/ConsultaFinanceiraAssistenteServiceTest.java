@@ -62,6 +62,7 @@ class ConsultaFinanceiraAssistenteServiceTest {
     void somaTodosOsGastosMesmoQuandoDetalheETruncado() {
         List<Gasto> gastos = java.util.stream.IntStream.range(0, 22)
                 .mapToObj(i -> gasto("10.00", CategoriaGasto.LAZER, inicio.plusDays(i))).toList();
+        gastos.get(0).setDescricao("Descrição de extrato ".repeat(20));
         when(gastoRepository.findByUsuarioIdAndDataBetweenAndPagoTrue(3L, inicio, fim)).thenReturn(gastos);
 
         Map<String, Object> resposta = service.gastosPeriodo(3L, inicio, fim, CategoriaGasto.LAZER);
@@ -70,6 +71,8 @@ class ConsultaFinanceiraAssistenteServiceTest {
         assertEquals(22, resposta.get("quantidade"));
         assertEquals(20, ((List<?>) resposta.get("maioresGastos")).size());
         assertEquals(true, resposta.get("detalhesLimitados"));
+        Map<?, ?> primeiro = (Map<?, ?>) ((List<?>) resposta.get("maioresGastos")).get(0);
+        assertTrue(((String) primeiro.get("descricao")).length() <= 81);
     }
 
     @Test

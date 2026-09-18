@@ -76,6 +76,31 @@ class AssistenteChatServiceTest {
         assertTrue(historicos.getAllValues().stream().allMatch(List::isEmpty));
     }
 
+    @Test
+    void conversaLongaDescartaParesAntigosAntesDaProximaChamada() {
+        @SuppressWarnings("unchecked") ObjectProvider<ChatClient> provider = mock(ObjectProvider.class);
+        ChatClient cliente = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec chamada = mock(ChatClient.ChatClientRequestSpec.class, Answers.RETURNS_SELF);
+        ChatClient.CallResponseSpec retorno = mock(ChatClient.CallResponseSpec.class);
+        when(provider.getIfAvailable()).thenReturn(cliente);
+        when(cliente.prompt()).thenReturn(chamada);
+        when(chamada.call()).thenReturn(retorno);
+        when(retorno.content()).thenReturn("Resposta longa. ".repeat(240));
+        AssistenteChatService service = new AssistenteChatService(provider,
+                mock(FerramentasFinanceirasAssistente.class), mock(QuotaAssistenteService.class));
+        String sessao = service.criarSessao(1L);
+
+        for (int i = 0; i < 5; i++) {
+            service.responder(sessao, usuario(1L),
+                    new MensagemChatRequest("Pergunta longa ".repeat(70), UUID.randomUUID()));
+        }
+
+        ArgumentCaptor<List<Message>> historicos = ArgumentCaptor.forClass(List.class);
+        verify(chamada, times(5)).messages(historicos.capture());
+        assertTrue(historicos.getAllValues().get(4).size() < 8);
+        assertEquals(0, historicos.getAllValues().get(4).size() % 2);
+    }
+
     private Usuario usuario(Long id) {
         Usuario usuario = new Usuario();
         usuario.setId(id);

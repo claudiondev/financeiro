@@ -14,13 +14,13 @@ Permitir perguntas em português sobre gastos, entradas e orçamentos já regist
 
 ## Dados e cálculos
 
-As ferramentas consultam resumo por período, gastos por período e orçamentos de um mês. Os totais são calculados no Java em `BigDecimal`. Apenas gastos pagos contam como saída realizada. As consultas não chamam o gerador de gastos fixos, que pode escrever no banco. Listas de gastos exibem até 20 itens, mas o total considera todos os registros do período. O período máximo é de 12 meses.
+As ferramentas consultam resumo por período, gastos por período e orçamentos de um mês. Os totais são calculados no Java em `BigDecimal`. Apenas gastos pagos contam como saída realizada. As consultas não chamam o gerador de gastos fixos, que pode escrever no banco. Listas de gastos exibem até 20 itens, com descrições limitadas a 80 caracteres, mas o total considera todos os registros do período. O período máximo é de 12 meses.
 
 O saldo é a diferença entre entradas e saídas registradas, não o saldo bancário. Orçamentos usam os limites cadastrados atualmente, mesmo quando o usuário pergunta sobre meses passados. Essas limitações são informadas ao modelo.
 
 ## Sessões, custo e falhas
 
-Conversas ficam em memória por até 30 minutos sem atividade, com até dez mensagens no contexto. Cada sessão tem segredo aleatório próprio; visitantes da conta demo não compartilham o histórico. Reenvio com o mesmo UUID durante a sessão devolve a resposta anterior. Não há persistência de conversas.
+Conversas ficam em memória por até 30 minutos sem atividade, com até dez mensagens no contexto. Antes de cada chamada, o histórico é reduzido em pares completos quando a estimativa de tokens do prompt ultrapassa 3.000. Cada sessão tem segredo aleatório próprio; visitantes da conta demo não compartilham o histórico. Reenvio com o mesmo UUID durante a sessão devolve a resposta anterior. Não há persistência de conversas.
 
 A quota diária fica no banco (`V17`): 30 perguntas compartilhadas na demo, 20 por conta normal e 50 globais. A atualização SQL do contador é atômica. Cada sessão aceita até cinco perguntas por minuto, e no máximo três chamadas de ferramentas por pergunta. O modelo tem limite de 800 tokens de saída por chamada e timeout de leitura de 45 segundos, sem repetição automática. A quota é reservada antes da chamada externa, inclusive quando o provedor falha.
 
