@@ -14,6 +14,8 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
     List<Gasto> findByUsuarioId(Long usuarioId);
 
+    List<Gasto> findByUsuarioIdAndDataBetweenAndPagoTrue(Long usuarioId, LocalDate inicio, LocalDate fim);
+
     @Query("SELECT g FROM Gasto g WHERE g.usuario.id = :usuarioId " +
             "AND (:categoria IS NULL OR g.categoria = :categoria) " +
             "AND (:mes IS NULL OR MONTH(g.data) = :mes) " +
