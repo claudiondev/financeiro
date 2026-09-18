@@ -2,14 +2,14 @@
 # 💰 Meu Controle Financeiro — API Backend
 
 ![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.3-green?style=for-the-badge&logo=springboot)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.15-green?style=for-the-badge&logo=springboot)
 ![Spring Security](https://img.shields.io/badge/Spring%20Security-6.4-green?style=for-the-badge&logo=springsecurity)
 ![JWT](https://img.shields.io/badge/JWT-Auth-black?style=for-the-badge&logo=jsonwebtokens)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?style=for-the-badge&logo=mysql)
 ![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0200?style=for-the-badge&logo=flyway)
 ![Render](https://img.shields.io/badge/Render-Deploy-46E3B7?style=for-the-badge&logo=render)
 
-> API REST completa para controle financeiro pessoal: autenticação JWT, orçamentos por categoria, contas recorrentes e financiamentos, parcelamento no cartão, importação de extrato bancário (OFX), metas de economia, um assistente financeiro baseado em regras e 141 testes automatizados.
+> API REST para controle financeiro pessoal: autenticação JWT, orçamentos, contas recorrentes, importação OFX, metas de economia, insights determinísticos e chat financeiro opcional com IA.
 
 ---
 
@@ -43,11 +43,12 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 - 🎯 **Metas de economia (poupança)** — meta de valor-alvo com prazo opcional; "registrar aporte" cria um gasto na categoria Poupança, progresso sempre calculado ao vivo (nunca armazenado), status EM_ANDAMENTO/CONCLUÍDA/ATRASADA
 - 📥 **Importação de extrato bancário (OFX)** — parser próprio (sem lib externa) para OFX 1.x/2.x, fluxo em 2 passos com revisão de categoria antes de confirmar, dedup por FITID (evita duplicar transação já importada)
 - 🤖 **Assistente financeiro** — motor de regras (não depende de LLM) que cruza orçamentos, ritmo de gastos, variação por categoria e dicas educacionais em insights priorizados por severidade
+- 💬 **Chat financeiro opcional** — Spring AI com três consultas de leitura sobre gastos, períodos e orçamentos; sessões temporárias isoladas, quota diária e chave de API apenas no servidor
 - 📈 **Evolução mensal** — série histórica de entradas, saídas e saldo
 - 📊 **Resumo e relatório** — saldo do mês, gasto por categoria, transações recentes
 - 🛡️ **Segurança em produção** — rate limiting no login/recuperação, headers HSTS/CSP/X-Frame-Options, proteção contra IDOR (todo endpoint filtra por dono do recurso), senha com BCrypt, revogação de token ao trocar senha
-- 🗄️ **15 migrações versionadas** com Flyway (schema evoluído incrementalmente, sem `ddl-auto=update`)
-- ✅ **141 testes automatizados** — JUnit 5 + Mockito nos services, testes de integração ponta a ponta com MockMvc
+- 🗄️ **16 migrações versionadas** com Flyway (schema evoluído incrementalmente, sem `ddl-auto=update`)
+- ✅ **Mais de 150 testes automatizados** — JUnit 5 + Mockito nos services, testes de integração com MockMvc
 
 ---
 
@@ -96,6 +97,14 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 
 ### 🤖 Assistente (`/assistente`)
 - `GET /assistente/insights` → Top 5 insights do mês, por severidade
+- `GET /assistente/chat/status` → Informa se o chat está habilitado
+- `POST /assistente/chat/sessoes` → Abre uma sessão temporária e devolve seu segredo
+- `POST /assistente/chat/mensagens` → Recebe `{ "mensagem": "...", "requisicaoId": "UUID" }` com header `X-Assistente-Sessao`
+- `DELETE /assistente/chat/sessao` → Encerra a sessão identificada pelo mesmo header
+
+O chat fica desligado por padrão. Para ativá-lo, configure `ASSISTENTE_HABILITADO=true` e `OPENAI_API_KEY` no ambiente do servidor. `ASSISTENTE_MODELO` é opcional (padrão `gpt-5.6-luna`). As perguntas e os dados financeiros necessários à resposta são processados pela OpenAI. As conversas ficam apenas na memória do backend e expiram após 30 minutos sem atividade. A demo usa sessões separadas por visitante; nenhuma ferramenta altera lançamentos. O limite diário inicial é de 30 perguntas para a demo, 20 por conta normal e 50 no aplicativo inteiro.
+
+Em produção, aplique `V17__create_quota_assistente.sql` manualmente no TiDB Cloud **antes** de ativar o chat. O Flyway está desabilitado nesse ambiente por causa da incompatibilidade do `GET_LOCK()` com o gateway do TiDB.
 
 ---
 
@@ -105,7 +114,7 @@ Construído com Java e Spring Boot, seguindo arquitetura em camadas com DTOs de 
 ./mvnw test
 ```
 
-141 testes: services isolados com Mockito, parser de OFX (`OfxParserTest`) e um conjunto de integração (`IntegracaoEndpointTest`) que sobe o contexto Spring completo (H2 + Security + JWT) para validar autenticação, autorização e IDOR ponta a ponta.
+Os testes cobrem services, parser de OFX, autenticação, isolamento de dados, quota concorrente e inicialização do chat com ou sem chave, sem fazer chamadas reais à OpenAI.
 
 ---
 
@@ -121,7 +130,7 @@ src/main/java/com/claudio/financeiro
 ├── exception    # GlobalExceptionHandler — erros padronizados em {"erro": "..."}
 └── config       # Segurança (JWT, Spring Security), rate limiting, seed do modo demo
 
-src/main/resources/db/migration   # Migrações Flyway (V2 a V16)
+src/main/resources/db/migration   # Migrações Flyway (V2 a V17)
 ```
 
 ---
@@ -133,7 +142,7 @@ Camadas clássicas (`Controller → Service → Repository`), com alguns pontos 
 - **DTOs de entrada e saída** em todo endpoint novo — nenhuma entidade JPA trafega direto no `@RequestBody`/`@ResponseBody` dos recursos principais
 - **Services decompostos por responsabilidade**: `GastoService` foi quebrado em `RelatorioService`, `EvolucaoService` e `CalculoFinanceiroUtil` quando cresceu demais, em vez de virar um God Class
 - **`GlobalExceptionHandler`** centraliza erros de validação, ownership (403/404) e JSON inválido num formato único
-- **Assistente financeiro atrás de uma interface** (`GeradorDeInsight`) — hoje é um motor de regras determinístico, mas o design já comporta uma implementação com LLM no futuro sem tocar no controller
+- **Insights determinísticos atrás de uma interface** (`GeradorDeInsight`) e chat com IA em serviço separado — os insights funcionam sem chave da OpenAI
 - **Valores monetários em `BigDecimal`**, nunca `Double` — evita erro de arredondamento em soma/parcelamento
 - **Progresso derivado, nunca armazenado** — parcelas pagas de um financiamento e valor acumulado de uma meta de economia são sempre a soma ao vivo dos registros vinculados, não um contador salvo que pode dessincronizar
 - **`OfxParser` sem dependência externa** — parser próprio via regex, tolerante ao OFX 1.x (SGML solto, tags sem fechamento) que a maioria dos bancos brasileiros exporta, além do XML fechado do OFX 2.x
@@ -159,9 +168,18 @@ cp .env.example .env
 # Preencha DB_USERNAME, DB_PASSWORD, JWT_SECRET (32+ caracteres) e, se quiser
 # testar recuperação de senha/lembretes, MAIL_USERNAME/MAIL_PASSWORD
 
+# Exporte as variáveis do .env para o processo do Maven
+set -a
+source .env
+set +a
+
 # Rode com o profile de desenvolvimento
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
+
+No IntelliJ, mantenha o profile `dev` e adicione `DB_USERNAME`, `DB_PASSWORD` e
+`JWT_SECRET` da sua `.env` em **Run > Edit Configurations > Environment variables**.
+O arquivo `.env` sozinho não é carregado automaticamente pela IDE.
 
 A API sobe em `http://localhost:8080`. No primeiro boot, o Flyway aplica as migrações e uma conta demo com dados de exemplo é criada automaticamente (`demo@meufinanceiro.app`, sem senha — use `POST /auth/demo`).
 
@@ -172,7 +190,8 @@ A API sobe em `http://localhost:8080`. No primeiro boot, o Flyway aplica as migr
 | Tecnologia | Descrição |
 |---|---|
 | Java 17 | Linguagem principal do projeto |
-| Spring Boot 3.4.3 | Framework para construção da API |
+| Spring Boot 3.5.15 | Framework para construção da API |
+| Spring AI 1.1.8 | Integração opcional com o modelo e ferramentas de consulta |
 | Spring Security | Autenticação stateless via JWT, headers de segurança |
 | JJWT 0.12.6 | Geração e validação de tokens JWT |
 | Spring Data JPA | Comunicação com banco de dados |

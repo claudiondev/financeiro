@@ -12,6 +12,8 @@ public interface SalarioRepository extends JpaRepository<Salario, Long> {
 
     List<Salario> findByUsuarioId(Long usuarioId);
 
+    List<Salario> findByUsuarioIdAndDataBetween(Long usuarioId, LocalDate inicio, LocalDate fim);
+
     @Query("SELECT YEAR(s.data), MONTH(s.data), " +
            "SUM(s.valor + COALESCE(s.comissao, 0) + COALESCE(s.adicional, 0)) " +
            "FROM Salario s WHERE s.usuario.id = :usuarioId AND s.data >= :desde " +

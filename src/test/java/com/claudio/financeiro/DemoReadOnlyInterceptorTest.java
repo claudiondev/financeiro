@@ -80,6 +80,19 @@ class DemoReadOnlyInterceptorTest {
         assertTrue(continua);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/assistente/chat/sessoes", "/assistente/chat/mensagens", "/assistente/chat/sessao"})
+    void deveLiberarSomenteEndpointsDoChatParaDemo(String caminho) throws Exception {
+        autenticarComo(usuario(true));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRequestURI()).thenReturn(caminho);
+
+        assertTrue(interceptor.preHandle(request, response, new Object()));
+        verify(response, never()).setStatus(anyInt());
+    }
+
     private Usuario usuario(boolean demo) {
         Usuario usuario = new Usuario();
         usuario.setEmail(demo ? "demo@meufinanceiro.app" : "claudio@teste.com");

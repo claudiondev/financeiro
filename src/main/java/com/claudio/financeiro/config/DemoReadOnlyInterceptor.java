@@ -31,6 +31,13 @@ public class DemoReadOnlyInterceptor implements HandlerInterceptor {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Usuario usuario && usuario.isDemo()) {
+            // O chat grava apenas quota compartilhada e conversa temporária, nunca lançamentos da demo.
+            String caminho = request.getRequestURI();
+            if ("/assistente/chat/sessoes".equals(caminho)
+                    || "/assistente/chat/mensagens".equals(caminho)
+                    || "/assistente/chat/sessao".equals(caminho)) {
+                return true;
+            }
             // 423 Locked, não 403: o interceptor de resposta do frontend trata todo 403 (e 401)
             // como sessão inválida e força logout — usar 403 aqui deslogaria o visitante no
             // meio da demo antes dele ver o aviso. 423 não colide com essa regra.
